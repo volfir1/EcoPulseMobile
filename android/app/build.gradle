@@ -86,13 +86,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.ecopulsemobile"
+    namespace 'com.ecopulse.app'
     defaultConfig {
-        applicationId "com.ecopulsemobile"
+        applicationId 'com.ecopulse.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
     }
     signingConfigs {
         debug {
@@ -120,9 +120,33 @@ android {
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
+        exclude 'META-INF/kotlin-stdlib.kotlin_module'
+        exclude 'META-INF/kotlin-stdlib-common.kotlin_module'
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+      buildFeatures {
+        buildConfig true
+    }
+
+kotlin {
+    sourceSets {
+        main {
+            kotlin.srcDirs += 'src/main/kotlin'
+        }
+        debug {
+            kotlin.srcDirs = []
+        }
+        release {
+            kotlin.srcDirs = []
+        }
+    }
+}
+     kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+        // Disable incremental compilation
+        freeCompilerArgs += ["-Xno-incremental-compilation"]
     }
 }
 
@@ -172,5 +196,15 @@ dependencies {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
+    }
+}
+
+afterEvaluate {
+    tasks.matching { it.name.contains('compile') && it.name.contains('Kotlin') }.configureEach {
+        // Skip Kotlin compile for BuildConfig files
+        doFirst {
+            // This helps prevent Kotlin from generating a duplicate BuildConfig
+            exclude "**/BuildConfig.kt"
+        }
     }
 }

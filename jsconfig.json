@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "baseUrl": ".",
+      "paths": {
+        "@features/*": ["./src/features/*"],
+        "@navigator/*": ["./src/navigator/*"],
+        "@screens/*": ["./src/screens/*"],
+        "@components/*": ["./components/*"],  // Changed from ["/components/"]
+        "utils/*": ["./utils/*"]             // Changed from ["/utils/*"]
+      }
+    },
+    "exclude": ["node_modules", ".expo"]
+}

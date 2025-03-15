@@ -1,21 +1,32 @@
-import { StatusBar } from 'expo-status-bar';
+// App.js
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import AppNavigator from './src/navigator/AppNavigator';
+import { View, ActivityIndicator } from 'react-native';
+
+// Import function for setting up error boundaries if needed
+// import { setupErrorHandling } from './src/utils/errorHandling';
+
+// // Initialize error handling
+// setupErrorHandling();
+
+// TODO: Implement AppProvider later
+// import { AppProvider } from './src/context/AppContext';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    // <AppProvider> -- Removed for now, will implement later
+      <NavigationContainer
+        fallback={
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        }
+      >
+        <StatusBar style="auto" />
+        <AppNavigator />
+      </NavigationContainer>
+    // </AppProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
