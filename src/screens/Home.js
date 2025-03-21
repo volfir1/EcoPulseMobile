@@ -8,11 +8,11 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
-  FlatList,
-  TextInput
+  FlatList
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("screen");
 
@@ -23,7 +23,7 @@ const energyModules = [
     icon: "sunny",
     color: "#FF9800",
     gradientColors: ["#FF9800", "#FB8C00"],
-    route: "SolarEnergy",
+    route: "Solar Energy",
     image: require("../../assets/imgs/solar-panel.png"),
     description: "Monitor your solar panel performance",
     stats: "24.5 kWh"
@@ -34,7 +34,7 @@ const energyModules = [
     icon: "thunderstorm",
     color: "#03A9F4",
     gradientColors: ["#03A9F4", "#0288D1"],
-    route: "WindEnergy",
+    route: "Wind Energy",
     image: require("../../assets/imgs/wind-turbine.png"),
     description: "Track wind turbine efficiency",
     stats: "8.2 kWh"
@@ -45,7 +45,7 @@ const energyModules = [
     icon: "flame",
     color: "#F44336",
     gradientColors: ["#F44336", "#D32F2F"],
-    route: "GeothermalEnergy",
+    route: "Geothermal",
     image: require("../../assets/imgs/geothermal-plant.png"),
     description: "Analyze geothermal system metrics",
     stats: "5.8 kWh"
@@ -56,7 +56,7 @@ const energyModules = [
     icon: "water",
     color: "#2196F3",
     gradientColors: ["#2196F3", "#1976D2"],
-    route: "HydropowerEnergy",
+    route: "Hydropower",
     image: require("../../assets/imgs/hydropower-dam.png"),
     description: "View hydroelectric generation data",
     stats: "12.3 kWh"
@@ -69,7 +69,7 @@ const quickActions = [
     title: "Sharing",
     icon: "share-social",
     color: "#4CAF50",
-    route: "EnergySharing"
+    route: "Energy Sharing"
   },
   {
     id: "recommendations",
@@ -83,18 +83,38 @@ const quickActions = [
     title: "Help",
     icon: "help-circle",
     color: "#03A9F4",
-    route: "HelpSupport"
+    route: "Help & Support"
   },
-  {
-    id: "settings",
-    title: "Settings",
-    icon: "settings",
-    color: "#757575",
-    route: "Settings"
-  }
+ 
 ];
 
 const Home = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  
+  // Custom header component
+  const CustomHeader = () => (
+    <LinearGradient
+      colors={['#4CAF50', '#388E3C']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={[styles.headerContainer, { paddingTop: insets.top }]}
+    >
+      <View style={styles.headerContent}>
+        <TouchableOpacity 
+          style={styles.menuButton}
+          onPress={() => navigation.openDrawer()}
+        >
+          <Ionicons name="menu" size={26} color="#FFF" />
+        </TouchableOpacity>
+        
+        <View style={styles.headerTitleContainer}>
+          <Text  right={15} style={styles.headerTitle}>EcoPulse</Text>
+        </View>
+      
+      </View>
+    </LinearGradient>
+  );
+
   // Render energy module item
   const renderEnergyModule = ({ item }) => (
     <TouchableOpacity
@@ -128,10 +148,10 @@ const Home = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="light-content" />
       
-      {/* Green Dashboard Border */}
-      <View style={styles.greenBorder} />
+      {/* Custom Header */}
+      <CustomHeader />
       
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -221,19 +241,61 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F7FA",
-    paddingTop: 0, // Adjusted after removing header
   },
-  greenBorder: {
-    height: 0,
-    backgroundColor: "#4CAF50",
+  headerContainer: {
     width: '100%',
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    zIndex: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    paddingHorizontal: 16,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  notificationButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFC107',
+  },
+  scrollContainer: {
+    paddingBottom: 30,
   },
   summarySection: {
     backgroundColor: '#FFF',
     paddingVertical: 15,
     paddingHorizontal: 16,
     marginBottom: 10,
-    marginTop: 0, // Adjusted after removing header
   },
   summaryContainer: {
     flexDirection: "row",
@@ -264,9 +326,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     marginTop: 2,
-  },
-  scrollContainer: {
-    paddingBottom: 30,
   },
   welcomeSection: {
     paddingHorizontal: 16,

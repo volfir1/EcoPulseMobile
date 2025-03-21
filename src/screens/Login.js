@@ -1,4 +1,4 @@
-// screens/Login.js - Updated to use useLogin hook
+// screens/Login.js - Updated to use useLogin hook with Google Sign-In availability check
 import React, { useState, useEffect } from "react";
 import { 
   View, 
@@ -18,18 +18,20 @@ import {
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import useLogin from "../../hooks/login";
+// Fix import path to match your project structure - adjust this path if needed
+import useLogin from "hooks/login";
 
 const { width, height } = Dimensions.get('window');
 
 const Login = ({ navigation }) => {
-  // Use the login hook
+  // Use the login hook with the added googleSignInAvailable property
   const {
     email,
     setEmail,
     password,
     setPassword,
     isLoading,
+    googleSignInAvailable, // Use this to conditionally show/enable the Google button
     handleLogin,
     handleGoogleSignIn,
     handleForgotPassword,
@@ -148,15 +150,30 @@ const Login = ({ navigation }) => {
             
             <Text style={styles.orText}>Or continue with</Text>
             
+            {/* Conditionally render Google Sign-In button based on availability */}
             <TouchableOpacity 
-              style={styles.googleButton}
+              style={[
+                styles.googleButton,
+                !googleSignInAvailable && styles.googleButtonDisabled
+              ]}
               onPress={handleGoogleSignIn}
-              disabled={isLoading}
+              disabled={isLoading || !googleSignInAvailable}
             >
               <View style={styles.googleIconContainer}>
-                <Ionicons name="logo-google" size={18} color="#4CAF50" />
+                <Ionicons 
+                  name="logo-google" 
+                  size={18} 
+                  color={googleSignInAvailable ? "#4CAF50" : "#A0A0A0"} 
+                />
               </View>
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
+              <Text style={[
+                styles.googleButtonText,
+                !googleSignInAvailable && styles.googleButtonTextDisabled
+              ]}>
+                {googleSignInAvailable 
+                  ? "Sign in with Google" 
+                  : "Google Sign-In unavailable"}
+              </Text>
             </TouchableOpacity>
             
             <View style={styles.signupContainer}>
@@ -300,6 +317,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     width: '100%',
   },
+  googleButtonDisabled: {
+    borderColor: '#F0F0F0',
+    backgroundColor: '#F8F8F8',
+  },
   googleIconContainer: {
     width: 24,
     height: 24,
@@ -311,6 +332,9 @@ const styles = StyleSheet.create({
     color: '#525F7F',
     fontWeight: '600',
     fontSize: 16,
+  },
+  googleButtonTextDisabled: {
+    color: '#A0A0A0',
   },
   signupContainer: {
     flexDirection: 'row',

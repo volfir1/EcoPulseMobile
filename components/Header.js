@@ -1,15 +1,14 @@
 import React from 'react';
-import { View, TouchableOpacity, TextInput, StatusBar } from 'react-native';
+import { View, TouchableOpacity, TextInput, StatusBar, Platform } from 'react-native';
 import { Text, Surface } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { MaterialIcons, Feather, Ionicons } from '@expo/vector-icons';
 
 // Import styles
 import styles, { COLORS } from './styles/headerStyles';
 
 // Button components
-const NotificationButton = ({ style, onPress, hasNotifications = true, white }) => (
+const NotificationButton = ({ style, onPress, hasNotifications = true, textColor }) => (
   <TouchableOpacity 
     style={[styles.actionButton, style]} 
     onPress={onPress}
@@ -17,13 +16,13 @@ const NotificationButton = ({ style, onPress, hasNotifications = true, white }) 
     <Ionicons
       name="notifications-outline"
       size={22}
-      color={white ? COLORS.white : COLORS.text.main}
+      color={textColor || COLORS.text.main}
     />
     {hasNotifications && <View style={styles.notificationBadge} />}
   </TouchableOpacity>
 );
 
-const MenuButton = ({ onPress, white }) => (
+const MenuButton = ({ onPress, textColor }) => (
   <TouchableOpacity 
     style={styles.actionButton} 
     onPress={onPress}
@@ -31,12 +30,12 @@ const MenuButton = ({ onPress, white }) => (
     <Feather
       name="menu"
       size={22}
-      color={white ? COLORS.white : COLORS.text.main}
+      color={textColor || COLORS.text.main}
     />
   </TouchableOpacity>
 );
 
-const BackButton = ({ onPress, white }) => (
+const BackButton = ({ onPress, textColor }) => (
   <TouchableOpacity 
     style={styles.actionButton} 
     onPress={onPress}
@@ -44,12 +43,12 @@ const BackButton = ({ onPress, white }) => (
     <Feather
       name="arrow-left"
       size={22}
-      color={white ? COLORS.white : COLORS.text.main}
+      color={textColor || COLORS.text.main}
     />
   </TouchableOpacity>
 );
 
-const SearchButton = ({ onPress, white }) => (
+const SearchButton = ({ onPress, textColor }) => (
   <TouchableOpacity 
     style={styles.actionButton} 
     onPress={onPress}
@@ -57,12 +56,12 @@ const SearchButton = ({ onPress, white }) => (
     <Feather
       name="search"
       size={20}
-      color={white ? COLORS.white : COLORS.text.main}
+      color={textColor || COLORS.text.main}
     />
   </TouchableOpacity>
 );
 
-const ProfileButton = ({ onPress, white }) => (
+const ProfileButton = ({ onPress, textColor }) => (
   <TouchableOpacity 
     style={styles.actionButton} 
     onPress={onPress}
@@ -70,7 +69,7 @@ const ProfileButton = ({ onPress, white }) => (
     <Feather
       name="user"
       size={20}
-      color={white ? COLORS.white : COLORS.text.main}
+      color={textColor || COLORS.text.main}
     />
   </TouchableOpacity>
 );
@@ -78,10 +77,8 @@ const ProfileButton = ({ onPress, white }) => (
 const Header = ({
   title,
   transparent = false,
-  white = false,
   back = false,
   search = false,
-  gradient = false,
   showNotification = true,
   showProfile = false,
   onNotificationPress,
@@ -91,11 +88,33 @@ const Header = ({
   searchPlaceholder = "Search",
   onSearchChange,
   statusBarType = "default", // 'default', 'light-content', 'dark-content'
+  hideStatusBar = false,     // Option to hide StatusBar component
+  style = {},                // Additional style props
 }) => {
   const navigation = useNavigation();
   
+  // Determine text color based on background color or explicit titleColor
+  const getTextColor = () => {
+    if (titleColor) return titleColor;
+    
+    if (bgColor) {
+      // Check if bgColor is dark or light to auto-determine text color
+      const isLight = bgColor.match(/(f|e|d|c|b|a|9|8|7|#fff|white)/i);
+      return isLight ? COLORS.text.main : COLORS.white;
+    }
+    
+    // Default text color
+    return COLORS.text.main;
+  };
+  
+  const textColor = getTextColor();
+  
   const handleLeftPress = () => {
-    return back ? navigation.goBack() : navigation.openDrawer();
+    if (back) {
+      return navigation.goBack();
+    } else {
+      return navigation.dispatch(DrawerActions.openDrawer());
+    }
   };
   
   const handleNotificationPress = () => {
@@ -113,25 +132,27 @@ const Header = ({
   };
   
   const renderStatusBar = () => {
+    if (hideStatusBar) return null;
+    
     let barStyle = 'default';
     
     if (statusBarType !== 'default') {
       barStyle = statusBarType;
-    } else if (white || gradient) {
+    } else if (textColor === COLORS.white) {
       barStyle = 'light-content';
     } else {
       barStyle = 'dark-content';
     }
     
-    return <StatusBar barStyle={barStyle} />;
+    return <StatusBar barStyle={barStyle} backgroundColor={bgColor || COLORS.background.paper} />;
   };
   
   const renderLeft = () => (
     <View style={styles.leftSection}>
       {back ? (
-        <BackButton onPress={handleLeftPress} white={white} />
+        <BackButton onPress={handleLeftPress} textColor={textColor} />
       ) : (
-        <MenuButton onPress={handleLeftPress} white={white} />
+        <MenuButton onPress={handleLeftPress} textColor={textColor} />
       )}
     </View>
   );
@@ -155,9 +176,8 @@ const Header = ({
       <View style={styles.centerSection}>
         <Text 
           style={[
-            styles.title, 
-            white && styles.titleWhite,
-            titleColor && { color: titleColor }
+            styles.title,
+            { color: textColor }
           ]}
           numberOfLines={1}
         >
@@ -172,34 +192,29 @@ const Header = ({
       {showNotification && (
         <NotificationButton 
           onPress={handleNotificationPress} 
-          white={white} 
+          textColor={textColor}
         />
       )}
       {showProfile && (
         <ProfileButton 
           onPress={handleProfilePress} 
-          white={white} 
+          textColor={textColor}
         />
       )}
     </View>
   );
   
   return (
-    <Surface style={[
-      styles.headerContainer,
-      transparent && styles.transparentHeader,
-      bgColor && { backgroundColor: bgColor }
-    ]}>
+    <Surface 
+      style={[
+        styles.headerContainer,
+        transparent && styles.transparentHeader,
+        bgColor && { backgroundColor: bgColor },
+        { shadowColor: bgColor || COLORS.background.paper },
+        style, // Apply additional style props
+      ]}
+    >
       {renderStatusBar()}
-      
-      {gradient && (
-        <LinearGradient
-        colors={[COLORS.primary.light, COLORS.primary.main]}  // Lighter green gradient
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.gradientHeader}
-      />
-      )}
       
       <View style={styles.navbar}>
         {renderLeft()}

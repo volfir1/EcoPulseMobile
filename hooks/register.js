@@ -1,97 +1,113 @@
-// hooks/useRegister.js
+// src/hooks/register.js
 import { useState } from 'react';
-import { useAuth } from 'src/context/AuthContext';
 import { Alert } from 'react-native';
+import { useAuth } from 'src/context/AuthContext';
 
 const useRegister = (navigation) => {
+  // Form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Get auth functions from context
   const { register, googleSignIn } = useAuth();
 
+  // Toggle terms acceptance
+  const toggleTerms = () => {
+    setAcceptedTerms(!acceptedTerms);
+  };
+
+  // Register with email/password
   const handleRegister = async () => {
-    // Validation
-    if (!firstName || !lastName || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    // Validate inputs
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Missing Fields', 'Please fill in all required fields');
       return;
     }
 
     if (!acceptedTerms) {
-      Alert.alert('Error', 'Please accept the terms and conditions');
+      Alert.alert('Terms & Conditions', 'Please accept the terms and conditions to continue');
       return;
     }
 
-    // Simple email validation
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
 
-    // Password strength
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+    // Validate password strength
+    if (password.length < 8) {
+      Alert.alert('Weak Password', 'Password should be at least 8 characters long');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Attempt to register with the provided information
       const result = await register({
-        firstName,
-        lastName,
-        email,
-        password
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        password,
+        gender: 'prefer-not-to-say',
+        avatar: 'default-avatar'
       });
-      
+
       if (result.success) {
+        // Clear form
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setPassword('');
+        setAcceptedTerms(false);
+
+        // Navigate to verification screen if required
         if (result.requireVerification) {
-          // Navigate to verification screen
-          navigation.navigate('EmailVerification', { email });
+          navigation.navigate('VerifyEmail', { 
+            email: email.trim(), 
+            userId: result.user.id 
+          });
         } else {
-          // Clear form
-          setFirstName('');
-          setLastName('');
-          setEmail('');
-          setPassword('');
-          setAcceptedTerms(false);
-          
-          // Show success message and navigate to login
-          Alert.alert('Registration Successful', 'Your account has been created successfully.', [
-            { text: 'OK', onPress: () => navigation.navigate('Login') }
-          ]);
+          // Navigate to the app's main screen
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          });
         }
       } else {
-        // Show error message
         Alert.alert('Registration Failed', result.message || 'Please try again');
       }
     } catch (error) {
-      Alert.alert('Registration Error', error.message || 'An unexpected error occurred');
+      console.error('Registration error:', error);
+      Alert.alert(
+        'Registration Error',
+        'An unexpected error occurred. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Google sign-in
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
       const result = await googleSignIn();
       
       if (result.success) {
-        // Navigate to home screen
-        navigation.navigate('App', { screen: 'Home' });
-      } else if (result.requireVerification) {
-        // Navigate to verification screen
-        navigation.navigate('EmailVerification', { email: result.email });
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
       } else if (result.message !== 'Sign-in was cancelled') {
-        // Show error message only if not cancelled by user
         Alert.alert('Google Sign-In Failed', result.message || 'Please try again');
       }
     } catch (error) {
+      console.error('Google sign-in error:', error);
       if (error.message !== 'Sign-in was cancelled') {
         Alert.alert('Google Sign-In Error', error.message || 'An unexpected error occurred');
       }
@@ -100,10 +116,7 @@ const useRegister = (navigation) => {
     }
   };
 
-  const toggleTerms = () => {
-    setAcceptedTerms(!acceptedTerms);
-  };
-
+  // Navigate to login screen
   const handleLoginNavigation = () => {
     navigation.navigate('Login');
   };

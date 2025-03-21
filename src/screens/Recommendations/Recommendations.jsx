@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSingleYearPicker } from "../../../components/YearPicker/useSingleYearPicker";
-
+import Header from "@components/Header";
 // Import custom hook and styles
 import { useRecommendations } from './hook';
 import styles from './styles';
@@ -136,22 +136,7 @@ const EnergyRecommendations = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Energy Recommendations</Text>
-          <Ionicons name="sunny" size={18} color="#E0F2F1" style={{ marginLeft: 4 }} />
-        </View>
-
-        <TouchableOpacity
-          style={styles.pdfButton}
-          onPress={handleDownloadPDF}
-          disabled={isLoading}
-        >
-          <Ionicons name="document-text-outline" size={18} color="#FFF" />
-          <Text style={styles.pdfButtonText}>Download PDF</Text>
-        </TouchableOpacity>
-      </View>
-
+      <Header title={'Energy Recommendations'}/>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Input Controls */}
         <View style={styles.controlsCard}>

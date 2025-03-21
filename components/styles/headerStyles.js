@@ -1,16 +1,16 @@
 import { StyleSheet, Platform, Dimensions } from 'react-native';
 
 const { height, width } = Dimensions.get('window');
-const isIphoneX = Platform.OS === 'ios' && (height === 812 || width === 812 || height === 896 || width === 896);
+const isIphoneX = Platform.OS === 'ios' && (height >= 812 || width >= 812);
 
 // Define theme colors with updated pastel greens
 export const COLORS = {
-    primary: {
-        main: '#34d399',    // Pastel mint green
-        light: '#6ee7b7',   // Lighter pastel green
-        dark: '#10b981',    // Slightly darker but still pastel
-        text: '#ffffff'
-      },
+  primary: {
+    main: '#34d399',
+    light: '#6ee7b7',
+    dark: '#10b981',
+    text: '#ffffff'
+  },
   secondary: {
     main: '#1a5f7a',
     light: '#2a7c9c',
@@ -35,24 +35,20 @@ export const COLORS = {
 };
 
 const styles = StyleSheet.create({
-  // Header container - made thicker
+  // Header container with improved positioning
   headerContainer: {
     backgroundColor: COLORS.background.paper,
     borderBottomWidth: 0,
-    elevation: 4,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 3,
-    marginTop: Platform.OS === 'ios' ? 40 : 10,
-    marginBottom: 10,
-    marginHorizontal: 10,
-    borderRadius: 15,
-    overflow: 'hidden',
-    height: 70, // Increased height to make header thicker
-    top: 8,
+    paddingTop: Platform.OS === 'ios' ? (isIphoneX ? 44 : 20) : 0,
+    height: Platform.OS === 'ios' ? (isIphoneX ? 90 : 70) : 60,
     width: '100%',
-    right: 10
+    zIndex: 100,
+    position: 'relative',
   },
   
   // Transparent header
@@ -63,39 +59,31 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   
-  // Navbar styles - adjusted for thicker header
+  // Navbar styles with better adaptability
   navbar: {
-    paddingHorizontal: 12, // More horizontal padding
-    height: 70, // Match the container height
-    paddingTop: isIphoneX ? 44 : Platform.OS === 'ios' ? 20 : 0,
+    flex: 1,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'transparent',
-    elevation: 0,
-    borderBottomWidth: 0,
-    width: 'auto'
   },
   
-  // Title - adjusted for thicker header
+  // Title with proper sizing
   title: {
-    fontSize: 19, // Slightly larger
+    fontSize: 18,
     fontWeight: '600',
     color: COLORS.text.main,
     letterSpacing: 0.3,
   },
-  titleWhite: {
-    color: COLORS.white,
-  },
   
-  // Action buttons - adjusted for thicker header
+  // Action buttons
   actionButton: {
-    width: 42, // Slightly larger
-    height: 42, // Slightly larger
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: 3,
   },
   
   // Left section
@@ -115,9 +103,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: COLORS.notification,
     borderWidth: 1.5,
     borderColor: COLORS.white,
@@ -127,29 +115,21 @@ const styles = StyleSheet.create({
   centerSection: {
     flex: 1,
     alignItems: 'center',
-    paddingBottom: 2, // Slight adjustment for vertical centering
-  },
-  
-  // Custom gradient header - adjusted for thicker header and updated colors
-  gradientHeader: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 70, // Match the container height
-    borderRadius: 15,
+    justifyContent: 'center',
   },
   
   // Search bar
   searchContainer: {
     flex: 1,
-    height: 40, // Slightly taller
+    height: 38,
     marginHorizontal: 16,
     backgroundColor: COLORS.background.subtle,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   searchInput: {
     flex: 1,
@@ -158,9 +138,6 @@ const styles = StyleSheet.create({
     color: COLORS.text.main,
     marginLeft: 8,
   },
-
-  
 });
-
 
 export default styles;

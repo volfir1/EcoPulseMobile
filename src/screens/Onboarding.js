@@ -1,214 +1,310 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from 'react';
 import {
-  StyleSheet,
-  Dimensions,
   View,
   Text,
-  Image,
+  StyleSheet,
+  Dimensions,
   TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
-  Animated,
-  ActivityIndicator,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+  Image,
+  ImageBackground,
+  FlatList,
+  SafeAreaView
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width, height } = Dimensions.get("screen");
+// Get screen dimensions
+const { width, height } = Dimensions.get('window');
 
-const Onboarding = ({ navigation }) => {
-  const [loading, setLoading] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(50));
+// Onboarding content
+const onboardingData = [
+  {
+    id: '1',
+    title: 'Welcome to EcoPulse',
+    description: 'Your personal energy management and sustainability assistant.',
+    image: require('../../assets/imgs/bg.webp'), // Make sure this path is correct
+  },
+  {
+    id: '2',
+    title: 'Track Your Energy',
+    description: 'Monitor Energy Trends.',
+    image: require('../../assets/imgs/trend.png'), // Make sure this path is correct
+  },
+  {
+    id: '3',
+    title: 'Join the Community',
+    description: 'Connect with others who are passionate about sustainability and share tips.',
+    image: require('../../assets/imgs/connect.png'), // Make sure this path is correct
+  },
+  {
+    id: '4',
+    title: 'Get Started',
+    description: 'Sign up now to begin your journey towards a more sustainable lifestyle.',
+    image: require('../../assets/imgs/start.png'), // Make sure this path is correct
+  },
+];
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+const OnboardingScreen = ({ navigation }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const flatListRef = useRef(null);
 
-  const handleGetStarted = () => {
-    setLoading(true);
-    navigation.navigate("Login");
-    setLoading(false);
+  // Handle navigating to next slide
+  const goToNextSlide = () => {
+    if (currentIndex < onboardingData.length - 1) {
+      flatListRef.current.scrollToIndex({
+        index: currentIndex + 1,
+        animated: true,
+      });
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      // If we're on the last slide, complete onboarding
+      completeOnboarding();
+    }
+  };
+
+  // Handle navigating to previous slide
+  const goToPreviousSlide = () => {
+    if (currentIndex > 0) {
+      flatListRef.current.scrollToIndex({
+        index: currentIndex - 1,
+        animated: true,
+      });
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  // Handle skipping onboarding
+  const skipOnboarding = () => {
+    completeOnboarding();
+  };
+
+  // Mark onboarding as complete and navigate to next screen
+  const completeOnboarding = async () => {
+    try {
+      // Mark that the intro has been seen
+      await AsyncStorage.setItem('ecopulse_has_seen_intro', 'true');
+      
+      // Check if the user is already authenticated
+      const userData = await AsyncStorage.getItem('ecopulse_user');
+      const hasCompletedOnboarding = await AsyncStorage.getItem('ecopulse_has_completed_onboarding');
+      
+      console.log('Completing onboarding, user data:', userData ? 'exists' : 'not found');
+      
+      if (userData && hasCompletedOnboarding === 'true') {
+        // User exists and has completed profile setup - go to Home
+        console.log('User exists and has completed onboarding, navigating to Home');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Home' }],
+        });
+      } else if (userData) {
+        // User exists but needs to complete profile - go to OnboardRegister
+        console.log('User exists but needs to complete profile, navigating to OnboardRegister');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'OnboardRegister' }],
+        });
+      } else {
+        // No user - go to Auth
+        console.log('No user found, navigating to Auth');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Auth' }],
+        });
+      }
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      // Default to Auth screen if there's an error
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Auth' }],
+      });
+    }
+  };
+
+  // Render individual slide
+  const renderSlide = ({ item }) => (
+    <ImageBackground source={item.image} style={styles.slide} resizeMode="cover">
+      <View style={styles.contentOverlay}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.description}>{item.description}</Text>
+      </View>
+    </ImageBackground>
+  );
+
+  // Handle scroll event to update current index
+  const handleScroll = (event) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / width);
+    setCurrentIndex(index);
+  };
+
+  // Render pagination dots
+  const renderPaginationDots = () => {
+    return (
+      <View style={styles.paginationContainer}>
+        {onboardingData.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              { backgroundColor: index === currentIndex ? '#4CAF50' : '#E0E0E0' }
+            ]}
+          />
+        ))}
+      </View>
+    );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" />
-
-      {/* Background Image */}
-      <Image
-        source={require("../../assets/imgs/bg.webp")}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
-
-      {/* Gradient Overlay */}
-      <LinearGradient
-        colors={["rgba(0,0,0,0)", "rgba(7,58,27,0.8)", "rgba(10,35,20,0.95)"]}
-        locations={[0, 0.6, 1]}
-        style={styles.gradient}
-      />
-
-      {/* Content */}
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Image
-              source={require("../../assets/imgs/ecopulse-logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.logoText}>EcoPulse</Text>
-        </View>
-
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>Renewable Energy Dashboard</Text>
-          <Text style={styles.subtitle}>
-            Monitor and optimize your energy systems with intelligent analytics
-            and real-time insights
-          </Text>
-        </View>
-
-        {/* Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleGetStarted}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Get Started</Text>
-            )}
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          {currentIndex > 0 ? (
+            <TouchableOpacity onPress={goToPreviousSlide} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.placeholder} />
+          )}
+          
+          <TouchableOpacity onPress={skipOnboarding} style={styles.skipButton}>
+            <Text style={styles.skipText}>Skip</Text>
           </TouchableOpacity>
         </View>
-      </Animated.View>
-    </SafeAreaView>
+      </SafeAreaView>
+      
+      <FlatList
+        ref={flatListRef}
+        data={onboardingData}
+        renderItem={renderSlide}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      />
+      
+      <SafeAreaView style={styles.bottomSafeArea}>
+        {renderPaginationDots()}
+        
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={goToNextSlide}
+          >
+            <Text style={styles.buttonText}>
+              {currentIndex === onboardingData.length - 1 ? "Get Started" : "Next"}
+            </Text>
+            <Ionicons 
+              name={currentIndex === onboardingData.length - 1 ? "checkmark-circle" : "arrow-forward"} 
+              size={20} 
+              color="white" 
+            />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A2314",
+    backgroundColor: '#000', // Changed to black for better fullscreen image appearance
   },
-  backgroundImage: {
-    width,
-    height,
-    position: "absolute",
-  },
-  gradient: {
-    position: "absolute",
+  safeArea: {
+    position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
-    top: 0,
-    height: height,
+    zIndex: 10,
   },
-  content: {
-    flex: 1,
-    justifyContent: "space-between",
-    padding: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
+  bottomSafeArea: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
   },
-  logoContainer: {
-    alignItems: "center",
-    marginTop: height * 0.08,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  logoCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: "white",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-    marginBottom: 16,
+  backButton: {
+    padding: 8,
   },
-  logo: {
-    width: 70,
-    height: 70,
+  placeholder: {
+    width: 40,
+    height: 40,
   },
-  logoText: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "white",
-    letterSpacing: 1,
+  skipButton: {
+    padding: 8,
   },
-  textContainer: {
-    marginTop: height * 0.1,
+  skipText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  slide: {
+    width,
+    height,
+    justifyContent: 'flex-end',
+  },
+  contentOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent overlay for better text readability
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "white",
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
     marginBottom: 16,
-    textAlign: "center",
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 16,
-    color: "rgba(255,255,255,0.9)",
-    marginBottom: 24,
-    lineHeight: 24,
-    textAlign: "center",
+  description: {
+    fontSize: 17,
+    color: '#FFFFFF',
+    textAlign: 'center',
     paddingHorizontal: 20,
+    lineHeight: 24,
   },
-  buttonContainer: {
-    marginTop: 40,
-    width: "100%",
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 20,
   },
-  primaryButton: {
-    backgroundColor: "#4CAF50",
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 5,
+  },
+  footer: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
   },
-  primaryButtonText: {
-    color: "white",
+  buttonText: {
+    color: 'white',
     fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
+    fontWeight: 'bold',
+    marginRight: 8,
   },
 });
 
-export default Onboarding;
+export default OnboardingScreen;

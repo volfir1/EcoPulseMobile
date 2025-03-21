@@ -5,6 +5,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    top: 23
   },
   header: {
     backgroundColor: '#1E8449', // Darker green to match web version

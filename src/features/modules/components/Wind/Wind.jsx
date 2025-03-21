@@ -15,7 +15,7 @@ import ViewShot from "react-native-view-shot";
 import YearRangePicker from "@components/YearPicker/useYearPicker";
 import SimpleChart from './Chart';
 import useEnergyAnalytics from "../../../../../store/useEnergyAnalytics";
-
+import Header from "@components/Header";
 // Import updated styles - make sure the path is correct
 import styles from './styles';
 
@@ -84,6 +84,7 @@ const WindEnergy = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Header title={'Wind'}/>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
       
       <ScrollView

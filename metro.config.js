@@ -1,5 +1,5 @@
-const { getDefaultConfig } = require('@react-native/metro-config');
+const { getDefaultConfig } = require('@expo/metro-config');
 
-const config = getDefaultConfig(__dirname);
+const defaultConfig = getDefaultConfig(__dirname);
 
-module.exports = config;
+module.exports = defaultConfig;

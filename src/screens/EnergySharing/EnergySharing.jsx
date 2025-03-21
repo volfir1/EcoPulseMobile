@@ -21,7 +21,7 @@ import LeafletMap from './mapHelper';
 
 // Import styles
 import styles from './styles';
-
+import Header from "@components/Header";
 // Location coordinates (Philippines regions)
 const locationCoordinates = {
   "Bohol": { lat: 9.8500, lng: 124.1435 },
@@ -39,7 +39,11 @@ const RegionCard = ({ region, isExpanded, onToggle, isHovered }) => {
   const hasSurplus = surplus > 0;
   
   return (
+  <>
+      
+    
     <TouchableOpacity 
+    
       style={[
         styles.regionCard,
         {
@@ -158,7 +162,9 @@ const RegionCard = ({ region, isExpanded, onToggle, isHovered }) => {
         />
       </View>
     </TouchableOpacity>
+    </>
   );
+  
 };
 
 // Summary Card Component
@@ -173,11 +179,9 @@ const SummaryCard = ({ locationsWithTotals }) => {
   const deficitLocations = locationsWithTotals.filter(loc => loc.totalPredictedGeneration <= loc.totalConsumption);
   
   return (
+    
     <View style={styles.summaryCard}>
-      <View style={styles.summaryHeader}>
-        <Ionicons name="bar-chart" size={20} color="#1E293B" />
-        <Text style={styles.summaryTitle}>Regional Energy Summary</Text>
-      </View>
+
       
       <View style={styles.summaryContent}>
         <View style={styles.statsContainer}>
@@ -393,13 +397,11 @@ const EnergySharing = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
-      
+
+   
+      <Header title={'Peer to Peer Energy Sharing'}/>
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Ionicons name="flash" size={24} color="#2E7D32" />
-          <Text style={styles.title}>Peer-to-Peer Energy Sharing</Text>
-        </View>
+    
         
         <View style={styles.controlsContainer}>
           <View style={styles.yearPickerContainer}>

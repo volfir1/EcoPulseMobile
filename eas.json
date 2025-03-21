@@ -1,0 +1,52 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "ENVIRONMENT": "development"
+      }
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    },
+    "development-apk": {
+      "developmentClient": true,
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug",
+        "withoutCredentials": true,
+        "distribution": "internal"
+      },
+      "env": {
+        "ENVIRONMENT": "development"
+      },
+      "cache": {
+        "key": "development-android-v2"
+      }
+    },
+    "development-simple": {
+      "developmentClient": true,
+      "android": {
+        "buildType": "apk",
+        "withoutCredentials": true
+      },
+      "env": {
+        "ENVIRONMENT": "development"
+      },
+      "cache": {
+        "key": "simple-build-v1"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

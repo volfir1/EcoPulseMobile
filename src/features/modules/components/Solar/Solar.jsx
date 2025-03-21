@@ -15,7 +15,7 @@ import ViewShot from "react-native-view-shot";
 import YearRangePicker from "@components/YearPicker/useYearPicker";
 import SimpleChart from './Chart';
 import useEnergyAnalytics from "../../../../../store/useEnergyAnalytics";
-
+import Header from "@components/Header";
 // Import updated styles - make sure the path is correct
 import styles from './styles';
 
@@ -84,123 +84,139 @@ const SolarEnergy = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Use the improved header with hideStatusBar to prevent duplicate StatusBar */}
+      <Header 
+        title={'Solar Energy'} 
+        bgColor="#F8F9FA" 
+        hideStatusBar={true}
+        style={{ 
+          marginTop: 0, 
+          marginBottom: 0, 
+          marginHorizontal: 0,
+          borderRadius: 0,
+          shadowOpacity: 0.04,
+          
+        }}
+      />
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
       
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header Section */}
-        <View style={styles.headerContainer}>
-          <View style={styles.titleRow}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="sunny" size={24} color="#FFB800" />
-            </View>
-            <Text style={styles.headerTitle}>Solar Energy</Text>
-          </View>
-          
-          {connectionStatus === 'disconnected' && (
-            <View style={styles.connectionCard}>
-              <View style={styles.connectionIndicator}>
-                <View style={[styles.connectionDot, { backgroundColor: '#FF6B6B' }]} />
-                <Text style={styles.connectionText}>Using demo data</Text>
+        {/* Main Content Section */}
+        <View style={styles.contentContainer}>
+          <View style={styles.headerContainer}>
+            <View style={styles.titleRow}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="sunny" size={24} color="#FFB800" />
               </View>
+              <Text style={styles.headerTitle}>Analytics Dashboard</Text>
             </View>
-          )}
-          
-          <Text style={styles.selectedRange}>
-            Selected Range: {yearValues.startYear} - {yearValues.endYear} ({yearValues.yearDiff} years)
-          </Text>
-        </View>
-
-        {/* Year Range Picker */}
-        <View style={styles.pickerCard}>
-          <YearRangePicker
-            initialStartYear={yearValues.startYear}
-            initialEndYear={yearValues.endYear}
-            onStartYearChange={handleStartYearChange}
-            onEndYearChange={handleEndYearChange}
-            style={styles.yearPicker}
-            primaryColor="#FFB800"
-          />
-        </View>
-
-        {/* Power Generation Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Power Generation Trend</Text>
-          <Text style={[styles.generationValue, { color: "#FFB800" }]}>
-            {currentProjection ? currentProjection.toFixed(1) : '--'} GWh
-          </Text>
-          <Text style={styles.cardSubtitle}>
-            Predictive Analysis Generation projection
-          </Text>
-
-          {/* Chart Component with ViewShot wrapper */}
-          {generationData && generationData.length > 0 ? (
-            <ViewShot ref={chartRef} options={{format: 'png', quality: 0.8}}>
-              <SimpleChart
-                data={generationData}
-                width={width - 40}
-                height={220}
-                barColor="#FFB800"
-              />
-            </ViewShot>
-          ) : (
-            <View style={styles.noDataContainer}>
-              <Ionicons name="analytics-outline" size={40} color="#CBD5E1" />
-              <Text style={styles.noDataText}>No data available for selected years</Text>
-            </View>
-          )}
-        </View>
-        
-        {/* Share/Download Buttons */}
-        <View style={styles.actionButtonsContainer}>
-          {/* PDF Download Button */}
-          <TouchableOpacity
-            style={[styles.pdfButton, pdfGenerating && styles.disabledButton]}
-            onPress={handleDownloadPDF}
-            activeOpacity={0.8}
-            disabled={pdfGenerating}
-          >
-            {pdfGenerating ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <>
-                <Ionicons name="document-text-outline" size={20} color="white" style={{ marginRight: 8 }} />
-                <Text style={styles.buttonText}>Download PDF</Text>
-              </>
+            
+            {connectionStatus === 'disconnected' && (
+              <View style={styles.connectionCard}>
+                <View style={styles.connectionIndicator}>
+                  <View style={[styles.connectionDot, { backgroundColor: '#FF6B6B' }]} />
+                  <Text style={styles.connectionText}>Using demo data</Text>
+                </View>
+              </View>
             )}
-          </TouchableOpacity>
-          
-          {/* Share Button */}
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={handleShareText}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="share-outline" size={20} color="white" style={{ marginRight: 8 }} />
-            <Text style={styles.buttonText}>Share Summary</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Error message if present */}
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+            
+            <Text style={styles.selectedRange}>
+              Selected Range: {yearValues.startYear} - {yearValues.endYear} ({yearValues.yearDiff} years)
+            </Text>
           </View>
-        )}
-        
-        {/* Data Source Information */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>
-            <Ionicons name="information-circle-outline" size={14} /> Data Source
-          </Text>
-          <Text style={styles.infoText}>
-            {yearValues.startYear > 2023 || yearValues.endYear > 2023 ? 
-              "Historical data (2019-2023) used to project values for future years." :
-              "Data from official energy generation records."
-            }
-          </Text>
+
+          {/* Year Range Picker */}
+          <View style={styles.pickerCard}>
+            <YearRangePicker
+              initialStartYear={yearValues.startYear}
+              initialEndYear={yearValues.endYear}
+              onStartYearChange={handleStartYearChange}
+              onEndYearChange={handleEndYearChange}
+              style={styles.yearPicker}
+              primaryColor="#FFB800"
+            />
+          </View>
+
+          {/* Power Generation Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Power Generation Trend</Text>
+            <Text style={[styles.generationValue, { color: "#FFB800" }]}>
+              {currentProjection ? currentProjection.toFixed(1) : '--'} GWh
+            </Text>
+            <Text style={styles.cardSubtitle}>
+              Predictive Analysis Generation projection
+            </Text>
+
+            {/* Chart Component with ViewShot wrapper */}
+            {generationData && generationData.length > 0 ? (
+              <ViewShot ref={chartRef} options={{format: 'png', quality: 0.8}}>
+                <SimpleChart
+                  data={generationData}
+                  width={width - 40}
+                  height={220}
+                  barColor="#FFB800"
+                />
+              </ViewShot>
+            ) : (
+              <View style={styles.noDataContainer}>
+                <Ionicons name="analytics-outline" size={40} color="#CBD5E1" />
+                <Text style={styles.noDataText}>No data available for selected years</Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Share/Download Buttons */}
+          <View style={styles.actionButtonsContainer}>
+            {/* PDF Download Button */}
+            <TouchableOpacity
+              style={[styles.pdfButton, pdfGenerating && styles.disabledButton]}
+              onPress={handleDownloadPDF}
+              activeOpacity={0.8}
+              disabled={pdfGenerating}
+            >
+              {pdfGenerating ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Ionicons name="document-text-outline" size={20} color="white" style={{ marginRight: 8 }} />
+                  <Text style={styles.buttonText}>Download PDF</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            
+            {/* Share Button */}
+            <TouchableOpacity
+              style={styles.shareButton}
+              onPress={handleShareText}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-outline" size={20} color="white" style={{ marginRight: 8 }} />
+              <Text style={styles.buttonText}>Share Summary</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Error message if present */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+          
+          {/* Data Source Information */}
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>
+              <Ionicons name="information-circle-outline" size={14} /> Data Source
+            </Text>
+            <Text style={styles.infoText}>
+              {yearValues.startYear > 2023 || yearValues.endYear > 2023 ? 
+                "Historical data (2019-2023) used to project values for future years." :
+                "Data from official energy generation records."
+              }
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

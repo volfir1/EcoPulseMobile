@@ -1,10 +1,56 @@
 {
   "expo": {
-    "name": "EcoPulseMobile",
+    "name": "EcoPulse",
     "slug": "EcoPulseMobile",
+    "owner": "lester20",
     "version": "1.0.0",
+    "scheme": "ecopulse",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "android": {
-      "package": "com.ecopulse.app"
-    }
+      "package": "com.ecopulse.app",
+      "googleServicesFile": "./android/app/google-services.json",
+      "permissions": ["INTERNET"]
+    },
+    "ios": {
+      "bundleIdentifier": "com.ecopulse.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "config": {
+        "firebase": {
+          "apiKey": "AIzaSyAzWSHsLzekHXcsULz096dKaOqnd22Vuxg",
+          "authDomain": "ecopulse-ba84f.firebaseapp.com",
+          "projectId": "ecopulse-ba84f",
+          "storageBucket": "ecopulse-ba84f.firebasestorage.app",
+          "messagingSenderId": "34035725627",
+          "appId": "1:34035725627:web:522e8687fb5906e9dfb31e",
+          "measurementId": "G-62FVNBXCL1"
+        },
+        "googleServicesFile": "./google-services-android.json"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e0faf8fc-e2f7-4d07-ab56-bae7a5578b06"
+      },
+      "googleClientId": {
+        "web": "34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com",
+        "android": "34035725627-g8vkrih40724lpjaa7qi4vofgojs5i43.apps.googleusercontent.com"
+      }
+    },
+    "plugins": [
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.34035725627-e0jl08l306859kctpfm11rfqntfg0bld"
+        }
+      ],
+      "expo-secure-store"
+    ]
   }
 }

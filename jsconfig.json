@@ -1,13 +1,30 @@
 {
-    "compilerOptions": {
-      "baseUrl": ".",
-      "paths": {
-        "@features/*": ["./src/features/*"],
-        "@navigator/*": ["./src/navigator/*"],
-        "@screens/*": ["./src/screens/*"],
-        "@components/*": ["./components/*"],  // Changed from ["/components/"]
-        "utils/*": ["./utils/*"]             // Changed from ["/utils/*"]
-      }
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@features/*": ["./src/features/*"],
+      "@navigator/*": ["./src/navigator/*"],
+      "@screens/*": ["./src/screens/*"],
+      "@components/*": ["./components/*"],
+      "utils/*": ["./utils/*"]
     },
-    "exclude": ["node_modules", ".expo"]
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-native",
+    "lib": ["dom", "esnext"],
+    "moduleResolution": "node",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "strict": true
+  },
+  "typeAcquisition": {
+    "enable": true,
+    "include": ["react", "react-native"]
+  },
+  "exclude": [
+    "node_modules", 
+    ".expo",
+    "babel.config.js",
+    "metro.config.js"
+  ]
 }

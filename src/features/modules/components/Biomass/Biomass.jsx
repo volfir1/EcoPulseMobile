@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
 import YearRangePicker from "@components/YearPicker/useYearPicker";import SimpleChart from './Chart';
 import useEnergyAnalytics from "../../../../../store/useEnergyAnalytics";
-
+import Header from "@components/Header";
 // Import updated styles - make sure the path is correct
 import styles from './styles';
 
@@ -83,6 +83,7 @@ const BiomassEnergy = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Header title={'Biomass'}/>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
       
       <ScrollView

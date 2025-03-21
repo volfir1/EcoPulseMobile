@@ -1,64 +1,90 @@
-// src/routes/routes.js
+// src/routes/routes.js - Modified with error handling
 import React, { lazy, Suspense } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import ErrorBoundary from '@components/ErrorBoundary';
 
 // Suspense fallback component
 const LoadingComponent = () => (
   <ActivityIndicator size="large" color="#0000ff" style={{ flex: 1, justifyContent: 'center' }} />
 );
 
-// Create a wrapper for lazy components
-const createLazyComponent = (importFunc) => {
-  const LazyComponent = lazy(importFunc);
+// Fallback component when imports fail
+const ImportErrorComponent = ({ componentName, error }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#dc3545' }}>
+      Failed to load {componentName}
+    </Text>
+    <Text>{error?.message || 'Unknown error'}</Text>
+  </View>
+);
+
+// Enhanced wrapper for lazy components with error handling
+const createLazyComponent = (importFunc, componentName) => {
+  const LazyComponent = lazy(() => 
+    importFunc()
+      .then(module => {
+        // Check if the module has a default export
+        if (!module.default) {
+          console.error(`Module ${componentName} does not have a default export!`);
+          throw new Error(`${componentName} does not have a default export`);
+        }
+        return module;
+      })
+      .catch(err => {
+        console.error(`Failed to load component ${componentName}:`, err);
+        // Return a fallback component instead of undefined
+        return {
+          default: props => (
+            <ImportErrorComponent componentName={componentName} error={err} {...props} />
+          )
+        };
+      })
+  );
+  
   return (props) => (
-    <Suspense fallback={<LoadingComponent />}>
-      <LazyComponent {...props} />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingComponent />}>
+        <LazyComponent {...props} />
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 
 // Regular imports for critical screens that should load immediately
 // These screens will be included in the main bundle
 const OnboardingScreen = require('../screens/Onboarding').default;
+const OnboardRegisterScreen = require('../screens/OnboardRegisterScreen').default;
 const Home = require('../screens/Home').default;
 
-// Lazy loaded routes using proper React.lazy
-// Public Routes
+// Public Routes with named components for better error tracking
 export const publicRoutes = {
   // Immediate loaded routes for critical screens
   Onboard: OnboardingScreen,
+  OnboardRegister: OnboardRegisterScreen,
   
-  // Lazy loaded routes using React.lazy
-  Login: createLazyComponent(() => import('../screens/Login')),
-  Register: createLazyComponent(() => import('../screens/Register')),
-  VerifyEmail: createLazyComponent(() => import('../screens/EmailVerification')),
-  ForgotPassword: createLazyComponent(() => import('../screens/ForgotPassword')),
-  ResetPassword: createLazyComponent(() => import('../screens/ResetPassword'))
+  // Lazy loaded routes with component names for error tracking
+  Login: createLazyComponent(() => import('../screens/Login'), 'Login'),
+  Register: createLazyComponent(() => import('../screens/Register'), 'Register'),
+  VerifyEmail: createLazyComponent(() => import('../screens/EmailVerification'), 'VerifyEmail'),
+  ForgotPassword: createLazyComponent(() => import('../screens/ForgotPassword'), 'ForgotPassword'),
+  ResetPassword: createLazyComponent(() => import('../screens/ResetPassword'), 'ResetPassword')
 };
 
-// User Dashboard & Features
+// User routes with named components for better error tracking
 export const userRoutes = {
-  // Critical user screens load immediately
   Home: Home,
-  
-  // Lazy loaded user screens
-  Dashboard: createLazyComponent(() => import('../screens/Home')),
-  EnergySharing: createLazyComponent(() => import('../screens/EnergySharing/EnergySharing')),
-  HelpSupport: createLazyComponent(() => import('../screens/SubmitTicket')),
-  Recommendations: createLazyComponent(() => import('../screens/Recommendations/Recommendations')),
-  UserProfile: createLazyComponent(() => import('../screens/Profile'))
+  Dashboard: createLazyComponent(() => import('../screens/Home'), 'Dashboard'),
+  EnergySharing: createLazyComponent(() => import('../screens/EnergySharing/EnergySharing'), 'EnergySharing'),
+  HelpSupport: createLazyComponent(() => import('../screens/SubmitTicket'), 'HelpSupport'),
+  Recommendations: createLazyComponent(() => import('../screens/Recommendations/Recommendations'), 'Recommendations'),
+  UserProfile: createLazyComponent(() => import('../screens/Profile'), 'UserProfile')
 };
 
-// Energy Modules - all lazy loaded
+// Module routes with named components for better error tracking
 export const moduleRoutes = {
-  Solar: createLazyComponent(() => import('../features/modules/components/Solar/Solar')),
-  Wind: createLazyComponent(() => import('../features/modules/components/Wind/Wind')),
-  Geo: createLazyComponent(() => import('../features/modules/components/Geothermal/Geothermal')),
-  Hydro: createLazyComponent(() => import('../features/modules/components/Hydropower/Hydropower')),
-  Bio: createLazyComponent(() => import('../features/modules/components/Biomass/Biomass'))
+  Solar: createLazyComponent(() => import('../features/modules/components/Solar/Solar'), 'Solar'),
+  Wind: createLazyComponent(() => import('../features/modules/components/Wind/Wind'), 'Wind'),
+  Geo: createLazyComponent(() => import('../features/modules/components/Geothermal/Geothermal'), 'Geo'),
+  Hydro: createLazyComponent(() => import('../features/modules/components/Hydropower/Hydropower'), 'Hydro'),
+  Bio: createLazyComponent(() => import('../features/modules/components/Biomass/Biomass'), 'Bio')
 };
-
-// Error Pages
-// export const errorRoutes = {
-//   NotFound: createLazyComponent(() => import('../screens/errors/NotFound'))
-// };

@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ViewShot from "react-native-view-shot";
 import YearRangePicker from "@components/YearPicker/useYearPicker";import ImprovedChart from './Chart';
 import useEnergyAnalytics from "../../../../../store/useEnergyAnalytics";
-
+import Header from "@components/Header";
 // Import styles
 import styles from './styles';
 
@@ -83,6 +83,7 @@ const GeothermalEnergy = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Header title={'Geothermal'}/>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
       
       <ScrollView

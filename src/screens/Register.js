@@ -1,376 +1,492 @@
-// screens/Register.js - Updated with useRegister hook
-import React, { useState, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  StatusBar, 
-  ImageBackground,
-  Animated,
-  Dimensions,
+import React, { useState, useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-  ActivityIndicator
-} from "react-native";
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import useRegister from "../../hooks/register";
+  Keyboard
+} from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import authService from '/services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width, height } = Dimensions.get('window');
+// Green theme colors
+const greenTheme = {
+  PRIMARY: '#2E7D32',
+  SECONDARY: '#4CAF50',
+  LIGHT: '#81C784',
+  BACKGROUND: '#E8F5E9',
+  TEXT: '#212121',
+  WHITE: '#FFFFFF',
+  GRAY: '#757575',
+  LIGHT_GRAY: '#EEEEEE',
+  ERROR: '#FF5252'
+};
 
 const Register = ({ navigation }) => {
-  // Use the register hook
-  const {
-    firstName,
-    setFirstName,
-    lastName,
-    setLastName,
-    email,
-    setEmail,
-    password,
-    setPassword,
-    isLoading,
-    acceptedTerms,
-    toggleTerms,
-    handleRegister,
-    handleGoogleSignIn,
-    handleLoginNavigation
-  } = useRegister(navigation);
+  const { setUser, setIsAuthenticated } = useAuth();
   
-  // Animation state
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(30));
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    role: 'user' // Default role
+  });
+  const [errors, setErrors] = useState({});
+  
+  // Refs for inputs to allow focus management
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  // Handle text input changes
+  const handleInputChange = (key, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [key]: value
+    }));
+    
+    // Clear error for this field
+    if (errors[key]) {
+      setErrors(prev => ({
+        ...prev,
+        [key]: ''
+      }));
+    }
+  };
+
+  // Validate form
+  const validateForm = () => {
+    let formErrors = {};
+    let isValid = true;
+
+    // Validate first name
+    if (!formData.firstName.trim()) {
+      formErrors.firstName = 'First name is required';
+      isValid = false;
+    }
+
+    // Validate last name
+    if (!formData.lastName.trim()) {
+      formErrors.lastName = 'Last name is required';
+      isValid = false;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      formErrors.email = 'Email is required';
+      isValid = false;
+    } else if (!emailRegex.test(formData.email)) {
+      formErrors.email = 'Please enter a valid email';
+      isValid = false;
+    }
+
+    // Validate password
+    if (!formData.password) {
+      formErrors.password = 'Password is required';
+      isValid = false;
+    } else if (formData.password.length < 8) {
+      formErrors.password = 'Password must be at least 8 characters';
+      isValid = false;
+    }
+
+    // Validate password confirmation
+    if (formData.password !== formData.confirmPassword) {
+      formErrors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    setErrors(formErrors);
+    return isValid;
+  };
+
+  // Extract userId from registration response
+  // This function handles different response formats
+  const extractUserId = (result) => {
+    console.log('Extracting userId from:', JSON.stringify(result, null, 2));
+    
+    // First, directly check for userId at the top level (this is our new case)
+    if (result.userId) {
+      console.log('Found userId directly in result:', result.userId);
+      return result.userId;
+    }
+    
+    // Then try other possible locations
+    if (result.user?.id) return result.user.id;
+    if (result.user?._id) return result.user._id;
+    if (result.user?.userId) return result.user.userId;
+    if (result.data?.user?.id) return result.data.user.id;
+    if (result.data?.userId) return result.data.userId;
+    
+    // Additional checks for MongoDB-style ObjectId
+    if (result._id) return result._id;
+    if (result.user?._id) return result.user._id;
+    
+    // Log what we found in the response to help debugging
+    console.log('Could not find userId. Result keys:', Object.keys(result));
+    if (result.user) {
+      console.log('User object keys:', Object.keys(result.user));
+    }
+    
+    // As a last resort, try to search for any property that might contain an ID
+    for (const key in result) {
+      if (typeof result[key] === 'string' && 
+          (key.toLowerCase().includes('id') || 
+           result[key].match(/^[0-9a-f]{24}$/i))) {
+        console.log('Found potential ID in property:', key, result[key]);
+        return result[key];
+      }
+    }
+    
+    return null;
+  };
+
+  // Submit form
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+  
+    // Dismiss keyboard
+    Keyboard.dismiss();
+    setLoading(true);
+  
+    try {
+      // Remove confirmPassword from the data sent to API
+      const { confirmPassword, ...registrationData } = formData;
+      
+      console.log('Sending registration data:', registrationData);
+      
+      // Register user through authService
+      const result = await authService.register(registrationData);
+      
+      console.log('Registration result:', JSON.stringify(result, null, 2));
+      
+      // Extract userId with our helper function
+      const userId = extractUserId(result);
+      console.log('Extracted userId:', userId);
+      
+      if (result.success) {
+        // If verification is required, navigate to verification screen
+        if (result.requireVerification) {
+          if (!userId) {
+            // Handle missing userId more gracefully
+            console.error('Failed to extract userId from response:', result);
+            
+            // Try to get userId directly from the response as a last resort
+            const lastResortUserId = result.userId || 
+                                    (result.user && (result.user.id || result.user._id)) || 
+                                    null;
+            
+            if (lastResortUserId) {
+              console.log('Found userId as last resort:', lastResortUserId);
+              
+              // Store userId in AsyncStorage
+              try {
+                await AsyncStorage.setItem('pendingVerificationUserId', lastResortUserId);
+                await AsyncStorage.setItem('pendingVerificationEmail', formData.email);
+              } catch (storageError) {
+                console.error('Failed to store verification data:', storageError);
+              }
+              
+              navigation.navigate('VerifyEmail', {
+                email: formData.email,
+                userId: lastResortUserId
+              });
+              return;
+            }
+            
+            // If we still can't find a userId, show alert
+            Alert.alert(
+              'Registration Incomplete',
+              'Your account was created, but we could not retrieve your user ID. Would you like to try again or go to login?',
+              [
+                {
+                  text: 'Try Again',
+                  onPress: handleSubmit
+                },
+                {
+                  text: 'Go to Login',
+                  onPress: () => navigation.navigate('Login')
+                }
+              ]
+            );
+            return;
+          }
+          
+          console.log('Navigating to verification with:', {
+            email: formData.email,
+            userId: userId
+          });
+          
+          // Store userId in AsyncStorage as backup
+          try {
+            await AsyncStorage.setItem('pendingVerificationUserId', userId);
+            await AsyncStorage.setItem('pendingVerificationEmail', formData.email);
+          } catch (storageError) {
+            console.error('Failed to store verification data:', storageError);
+          }
+          
+          navigation.navigate('VerifyEmail', {
+            email: formData.email,
+            userId: userId
+          });
+        } else {
+          // Set user in context and mark as authenticated
+          setUser(result.user);
+          setIsAuthenticated(true);
+          
+          // Navigate to the main app
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Dashboard' }] // Change to your actual dashboard name
+          });
+        }
+      } else {
+        // Show error message
+        Alert.alert('Registration Failed', result.message);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Registration Error', error.message || 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Navigate to login screen
+  const goToLogin = () => {
+    navigation.navigate('Login');
+  };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ImageBackground
-        source={require('../../assets/imgs/bg.png')}
-        style={styles.backgroundImage}
-        imageStyle={styles.backgroundImageStyle}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidContainer}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
-        <StatusBar translucent backgroundColor="transparent" />
-        
-        {/* Overlay gradient for better text readability */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)']}
-          style={styles.gradient}
-        />
-        
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.container}
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <Animated.View 
-            style={[
-              styles.panel,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }]
-              }
-            ]}
-          >
-            <View style={styles.iconContainer}>
-              <Ionicons name="person-add" size={80} color="#4CAF50" />
-            </View>
+          <View style={styles.formContainer}>
+            <Text style={styles.welcomeText}>Join EcoPulse</Text>
+            <Text style={styles.subtitle}>Create your account to track and manage your energy usage</Text>
             
-            <Text style={styles.title}>Create Account</Text>
-            
-            <View style={styles.inputContainer}>
-              <Ionicons name="person" size={20} color="#525F7F" style={styles.inputIcon} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>First Name</Text>
               <TextInput
-                style={styles.input}
-                placeholder="First Name"
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholderTextColor="#A0A0A0"
+                style={[styles.textInput, errors.firstName && styles.inputError]}
+                value={formData.firstName}
+                onChangeText={(text) => handleInputChange('firstName', text)}
+                placeholder="Enter your first name"
                 autoCapitalize="words"
-                editable={!isLoading}
+                returnKeyType="next"
+                onSubmitEditing={() => lastNameRef.current?.focus()}
+                blurOnSubmit={false}
               />
+              {errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
             </View>
             
-            <View style={styles.inputContainer}>
-              <Ionicons name="person" size={20} color="#525F7F" style={styles.inputIcon} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Last Name</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Last Name"
-                value={lastName}
-                onChangeText={setLastName}
-                placeholderTextColor="#A0A0A0"
+                ref={lastNameRef}
+                style={[styles.textInput, errors.lastName && styles.inputError]}
+                value={formData.lastName}
+                onChangeText={(text) => handleInputChange('lastName', text)}
+                placeholder="Enter your last name"
                 autoCapitalize="words"
-                editable={!isLoading}
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
+                blurOnSubmit={false}
               />
+              {errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
             </View>
             
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail" size={20} color="#525F7F" style={styles.inputIcon} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                value={email}
-                onChangeText={setEmail}
-                placeholderTextColor="#A0A0A0"
-                autoCapitalize="none"
+                ref={emailRef}
+                style={[styles.textInput, errors.email && styles.inputError]}
+                value={formData.email}
+                onChangeText={(text) => handleInputChange('email', text)}
+                placeholder="Enter your email"
                 keyboardType="email-address"
-                editable={!isLoading}
+                autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                blurOnSubmit={false}
               />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
             
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed" size={20} color="#525F7F" style={styles.inputIcon} />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
+                ref={passwordRef}
+                style={[styles.textInput, errors.password && styles.inputError]}
+                value={formData.password}
+                onChangeText={(text) => handleInputChange('password', text)}
+                placeholder="Create a password"
                 secureTextEntry
-                placeholderTextColor="#A0A0A0"
-                editable={!isLoading}
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                blurOnSubmit={false}
               />
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+              {!errors.password && (
+                <Text style={styles.passwordHint}>Must be at least 8 characters</Text>
+              )}
             </View>
             
-            <View style={styles.termsContainer}>
-              <TouchableOpacity 
-                style={styles.checkbox}
-                onPress={toggleTerms}
-                disabled={isLoading}
-              >
-                <Ionicons 
-                  name={acceptedTerms ? "checkmark-circle" : "ellipse-outline"} 
-                  size={20} 
-                  color={acceptedTerms ? "#4CAF50" : "#525F7F"} 
-                />
-              </TouchableOpacity>
-              <Text style={styles.termsText}>
-                I agree to the <Text style={styles.termsLink}>Terms & Conditions</Text>
-              </Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <TextInput
+                ref={confirmPasswordRef}
+                style={[styles.textInput, errors.confirmPassword && styles.inputError]}
+                value={formData.confirmPassword}
+                onChangeText={(text) => handleInputChange('confirmPassword', text)}
+                placeholder="Confirm your password"
+                secureTextEntry
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+              />
+              {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
             </View>
             
             <TouchableOpacity 
-              style={styles.button} 
-              onPress={handleRegister}
-              disabled={isLoading}
+              style={[styles.button, loading && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={loading}
             >
-              <LinearGradient
-                colors={['#4CAF50', '#3E9142']}
-                start={[0, 0]}
-                end={[1, 0]}
-                style={styles.buttonGradient}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.buttonText}>Create Account</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-            
-            <Text style={styles.orText}>Or register with</Text>
-            
-            <TouchableOpacity 
-              style={styles.googleButton}
-              onPress={handleGoogleSignIn}
-              disabled={isLoading}
-            >
-              <View style={styles.googleIconContainer}>
-                <Ionicons name="logo-google" size={18} color="#4CAF50" />
-              </View>
-              <Text style={styles.googleButtonText}>Sign up with Google</Text>
+              {loading ? (
+                <ActivityIndicator color={greenTheme.WHITE} />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
             </TouchableOpacity>
             
             <View style={styles.loginContainer}>
-              <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity 
-                onPress={handleLoginNavigation}
-                disabled={isLoading}
-              >
-                <Text style={styles.loginLink}>Login</Text>
+              <Text style={styles.loginText}>Already have an account?</Text>
+              <TouchableOpacity onPress={goToLogin}>
+                <Text style={styles.loginLink}>Log In</Text>
               </TouchableOpacity>
             </View>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </ImageBackground>
-    </TouchableWithoutFeedback>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    width: '100%',
+    backgroundColor: greenTheme.BACKGROUND
   },
-  backgroundImage: {
+  keyboardAvoidContainer: {
+    flex: 1
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 30
+  },
+  formContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 20,
+    backgroundColor: greenTheme.WHITE,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: 20
   },
-  backgroundImageStyle: {
-    resizeMode: 'cover',
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: greenTheme.TEXT,
+    marginBottom: 10,
+    textAlign: 'center'
   },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: height,
-  },
-  panel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 30,
-    borderRadius: 16,
-    alignItems: 'center',
-    width: width * 0.9,
-    maxWidth: 400,
-    alignSelf: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 30,
-    color: "#333",
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: '#F8F9FB',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    marginBottom: 16,
-    height: 56,
-    borderWidth: 1,
-    borderColor: '#EAEEF2',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
+  subtitle: {
     fontSize: 16,
-    color: '#333',
+    color: greenTheme.GRAY,
+    marginBottom: 25,
+    textAlign: 'center'
   },
-  termsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    alignSelf: 'flex-start',
+  inputGroup: {
+    marginBottom: 16
   },
-  checkbox: {
-    marginRight: 8,
-  },
-  termsText: {
+  inputLabel: {
     fontSize: 14,
-    color: '#525F7F',
+    color: greenTheme.TEXT,
+    marginBottom: 8,
+    fontWeight: '500'
   },
-  termsLink: {
-    color: '#4CAF50',
-    fontWeight: '600',
+  textInput: {
+    backgroundColor: greenTheme.LIGHT_GRAY,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    fontSize: 16
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: greenTheme.ERROR
+  },
+  errorText: {
+    color: greenTheme.ERROR,
+    fontSize: 12,
+    marginTop: 5
+  },
+  passwordHint: {
+    color: greenTheme.GRAY,
+    fontSize: 12,
+    marginTop: 5
   },
   button: {
-    width: '100%',
-    height: 56,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 24,
-    shadowColor: "#4CAF50",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  buttonGradient: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
+    backgroundColor: greenTheme.PRIMARY,
+    paddingVertical: 14,
+    borderRadius: 8,
     alignItems: 'center',
+    marginTop: 20
+  },
+  disabledButton: {
+    opacity: 0.7
   },
   buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  orText: {
-    marginVertical: 16,
-    color: '#999',
-    fontWeight: '500',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    marginBottom: 24,
-    width: '100%',
-  },
-  googleIconContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  googleButtonText: {
-    color: '#525F7F',
-    fontWeight: '600',
+    color: greenTheme.WHITE,
     fontSize: 16,
+    fontWeight: 'bold'
   },
   loginContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20
   },
   loginText: {
-    color: '#525F7F',
-    fontSize: 15,
+    color: greenTheme.GRAY,
+    fontSize: 14
   },
   loginLink: {
-    color: '#4CAF50',
+    color: greenTheme.PRIMARY,
+    fontSize: 14,
     fontWeight: 'bold',
-    fontSize: 15,
-  },
+    marginLeft: 5
+  }
 });
 
 export default Register;

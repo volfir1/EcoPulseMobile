@@ -6,7 +6,8 @@ import {
   Image, 
   Dimensions, 
   Animated,
-  StatusBar
+  StatusBar,
+  Alert
 } from "react-native";
 import { 
   Text, 
@@ -14,7 +15,6 @@ import {
   Surface, 
   Avatar
 } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
 import { 
   Feather, 
   MaterialCommunityIcons, 
@@ -22,7 +22,7 @@ import {
   FontAwesome5,
   MaterialIcons 
 } from '@expo/vector-icons';
-
+import { useAuth } from "src/context/AuthContext";
 
 // Import styles and theme
 import styles, { THEME } from './styles/drawerStyles';
@@ -48,7 +48,6 @@ const DrawerIcon = ({ name, size = 22, color = THEME.text.main, active = false }
     case "wind":
       return <FontAwesome5 name="wind" size={size} color={color} />;
     case "geo":
-      // Use a mountain icon instead of volcano
       return <MaterialCommunityIcons name="hydraulic-oil-temperature" size={size} color={color} />;
     case "hydro":
       return <MaterialCommunityIcons name="water" size={size} color={color} />;
@@ -67,7 +66,7 @@ const DrawerIcon = ({ name, size = 22, color = THEME.text.main, active = false }
   }
 };
 
-// Navigation Item Component with enhanced styling
+// Navigation Item Component with redesigned clean styling
 const NavigationItem = ({ 
   title, 
   iconName, 
@@ -88,22 +87,11 @@ const NavigationItem = ({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <LinearGradient
-        colors={isActive ? 
-          [THEME.primary.light, THEME.primary.main] : 
-          ['transparent', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[
-          { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: 10, opacity: isActive ? 1 : 0 }
-        ]}
-      />
-      
       <View style={styles.navItemContent}>
         <View style={[
           styles.iconContainer,
           isActive && styles.activeIconContainer,
-          iconColor && { backgroundColor: `${iconColor}20` }
+          iconColor && { backgroundColor: `${iconColor}15` }
         ]}>
           <DrawerIcon 
             name={iconName} 
@@ -136,12 +124,26 @@ const NavigationItem = ({
 
 // Custom Drawer Content Component
 const CustomDrawerContent = ({ navigation, state }) => {
+  // Get the logout function from AuthContext
+  const { user, logout } = useAuth();
+  
   const [expandedModules, setExpandedModules] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "Alex Johnson",
     email: "alex@ecopulse.io",
     avatarUrl: null, // Replace with actual avatar URL if available
   });
+  
+  // Update profile data from user context
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User',
+        email: user.email || 'user@example.com',
+        avatarUrl: user.avatar || null
+      });
+    }
+  }, [user]);
   
   const activeRouteName = state.routes[state.index]?.name || "";
   
@@ -158,7 +160,7 @@ const CustomDrawerContent = ({ navigation, state }) => {
   
   const modulesHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 300], // Increased from 240 to 300 to accommodate all modules
+    outputRange: [0, 300],
   });
 
   // Updated navigation structure based on the specified requirements
@@ -226,26 +228,48 @@ const CustomDrawerContent = ({ navigation, state }) => {
     return item.displayName || item.name;
   };
 
-  // Handle logout
-  const handleLogout = () => {
-    // Navigate to Auth stack
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Auth' }],
-    });
+  // Handle logout with auth context
+  const handleLogout = async () => {
+    try {
+      // Show confirmation dialog
+      Alert.alert(
+        "Logout",
+        "Are you sure you want to log out?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Logout", 
+            style: "destructive",
+            onPress: async () => {
+              // Show loading indicator or disable button here if needed
+              
+              // Call the logout function from AuthContext
+              const result = await logout();
+              
+              if (result.success) {
+                // The AuthContext will handle setting isAuthenticated to false,
+                // which should trigger the navigation change in AppNavigator
+                console.log('Logged out successfully');
+              } else {
+                // Show error message if logout failed
+                Alert.alert('Logout Failed', result.message || 'Something went wrong. Please try again.');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error during logout:', error);
+      Alert.alert('Logout Error', 'An unexpected error occurred. Please try again.');
+    }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Drawer Header with Profile Info and Green Gradient */}
-      <LinearGradient
-        colors={[THEME.primary.main, THEME.primary.dark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.header}
-      >
+      {/* Drawer Header with Profile Info - Redesigned with clean solid color */}
+      <View style={styles.header}>
         <View style={styles.logoContainer}>
           <MaterialCommunityIcons name="leaf" size={28} color="#FFFFFF" />
           <Text style={styles.logoText}>EcoPulse</Text>
@@ -264,18 +288,18 @@ const CustomDrawerContent = ({ navigation, state }) => {
               style={styles.profileAvatar}
               labelStyle={styles.avatarLabel}
               color="#FFFFFF"
-              backgroundColor="rgba(255,255,255,0.2)"
+              backgroundColor="rgba(255,255,255,0.25)"
             />
           )}
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{profileData.name}</Text>
             <View style={styles.emailContainer}>
-              <Feather name="mail" size={12} color="rgba(255,255,255,0.7)" style={styles.emailIcon} />
+              <Feather name="mail" size={12} color="rgba(255,255,255,0.8)" style={styles.emailIcon} />
               <Text style={styles.profileEmail}>{profileData.email}</Text>
             </View>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Scrollable Navigation Items */}
       <ScrollView 

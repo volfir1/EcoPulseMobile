@@ -1,11 +1,11 @@
 import { StyleSheet } from "react-native";
 
-// Updated theme colors with lighter green
+// Updated theme colors with modern approach
 export const THEME = {
   primary: {
-    main: '#22c55e',     // Updated to lighter green
-    light: '#4ade80',    // Even lighter green
-    dark: '#16a34a',     // Slightly darker but still light
+    main: '#22c55e',
+    light: '#4ade80',
+    dark: '#16a34a',
     text: '#ffffff'
   },
   secondary: {
@@ -30,12 +30,12 @@ export const THEME = {
     wind: '#38BDF8',
     geothermal: '#FF7F7F',
     hydropower: '#1C556F',
-    biomass: '#16a34a'   // Updated to match the green theme
+    biomass: '#16a34a'
   },
   divider: '#e2e8f0'
 };
 
-// Separated styles
+// Redesigned styles with clean professional look
 const styles = StyleSheet.create({
   // Container and layout styles
   container: {
@@ -50,23 +50,20 @@ const styles = StyleSheet.create({
   },
   navigationSection: {
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 16,
   },
   
-  // Header styles
+  // Header styles - redesigned with flat color
   header: {
     paddingTop: 40,
-    paddingBottom: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 45,
-    marginBottom: 10,
-    elevation: 8,
+    backgroundColor: THEME.primary.main,
+    elevation: 6,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    backgroundColor: THEME.primary.main, // Updated to use the new primary color
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -81,7 +78,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   
-  // Profile section styles
+  // Profile section styles - cleaner design
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -89,7 +86,7 @@ const styles = StyleSheet.create({
   profileAvatar: {
     marginRight: 15,
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "rgba(255,255,255,0.25)",
   },
   avatarLabel: {
     fontSize: 22,
@@ -113,10 +110,10 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     fontSize: 14,
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(255,255,255,0.9)",
   },
   
-  // Divider styles
+  // Divider styles - refined
   divider: {
     height: 1,
     backgroundColor: THEME.divider,
@@ -126,22 +123,22 @@ const styles = StyleSheet.create({
   itemDivider: {
     height: 1,
     backgroundColor: THEME.divider,
-    marginVertical: 6,
+    marginVertical: 8,
     marginHorizontal: 0,
-    opacity: 0.6,
+    opacity: 0.5,
   },
   
-  // Navigation item styles
+  // Navigation item styles - cleaner approach
   navItem: {
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 10,
+    borderRadius: 8,
     marginVertical: 4,
     position: 'relative',
   },
   childItem: {
     paddingLeft: 36,
-    paddingVertical: 10, // Consistent vertical padding
+    paddingVertical: 10,
     marginLeft: 16,
     marginVertical: 2,
   },
@@ -153,10 +150,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)', // Updated to match new green color
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -179,37 +176,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Expandable content styles
+  // Expandable content styles - smoother
   childrenContainer: {
     overflow: "hidden",
-    paddingBottom: 5, // Add some padding at the bottom
+    paddingBottom: 4,
   },
   
-  // Footer styles
+  // Footer styles - redesigned
   footer: {
     borderTopWidth: 1,
     borderTopColor: THEME.divider,
-    padding: 12, // Reduced from 16
+    padding: 12,
     elevation: 0,
+    backgroundColor: THEME.background.paper,
   },
   logoutButton: {
-    padding: 10, // Reduced from 14
+    padding: 10,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     backgroundColor: "#FEF2F2",
-    borderRadius: 10, // Reduced from 12
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#FEE2E2",
-    // Add width property to make it not span the full width
-    width: 120, // Specific width instead of full width
-    alignSelf: 'center', // Center it horizontally
+    width: 110,
+    alignSelf: 'center',
+    elevation: 1,
+    shadowColor: "#D70000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   logoutButtonText: {
     color: "#991b1b",
-    fontSize: 14, // Reduced from 16
+    fontSize: 14,
     fontWeight: "600",
-    marginLeft: 8, // Reduced from 10
+    marginLeft: 8,
   },
 });
 
