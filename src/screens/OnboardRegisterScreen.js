@@ -13,8 +13,22 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions } from '@react-navigation/native';
+
+// Import avatar helper functions
+import { isCloudinaryUrl, addCacheBuster, getDefaultAvatarUrl } from 'utils/avatarHelper';
+import CloudinaryImage from 'utils/CloudinaryImage';
+
+// Import default avatar images with correct paths
+import avatar1 from '/assets/avatars/png/1.png';
+import avatar2 from '/assets/avatars/png/2.png';
+import avatar3 from '/assets/avatars/png/3.png';
+import avatar4 from '/assets/avatars/4.png';
+import avatar5 from '/assets/avatars/png/5.png';
+import avatar6 from '/assets/avatars/png/6.png';
+import avatar7 from '/assets/avatars/png/7.png';
 
 // Default colors for fallback avatars
 const AVATAR_COLORS = ['#4CAF50', '#2196F3', '#FFC107', '#E91E63', '#9C27B0', '#FF5722', '#3F51B5'];
@@ -36,15 +50,15 @@ const genderOptions = [
   { value: 'prefer-not-to-say', label: 'Prefer not to say' }
 ];
 
-// Default avatars with letters and colors
+// Default avatars with images, letters and colors
 const defaultAvatars = [
-  { id: 'avatar-1', color: AVATAR_COLORS[0], letter: 'A' },
-  { id: 'avatar-2', color: AVATAR_COLORS[1], letter: 'B' },
-  { id: 'avatar-3', color: AVATAR_COLORS[2], letter: 'C' },
-  { id: 'avatar-4', color: AVATAR_COLORS[3], letter: 'D' },
-  { id: 'avatar-5', color: AVATAR_COLORS[4], letter: 'E' },
-  { id: 'avatar-6', color: AVATAR_COLORS[5], letter: 'F' },
-  { id: 'avatar-7', color: AVATAR_COLORS[6], letter: 'G' },
+  { id: 'avatar-1', image: avatar1, color: AVATAR_COLORS[0], letter: 'A' },
+  { id: 'avatar-2', image: avatar2, color: AVATAR_COLORS[1], letter: 'B' },
+  { id: 'avatar-3', image: avatar3, color: AVATAR_COLORS[2], letter: 'C' },
+  { id: 'avatar-4', image: avatar4, color: AVATAR_COLORS[3], letter: 'D' },
+  { id: 'avatar-5', image: avatar5, color: AVATAR_COLORS[4], letter: 'E' },
+  { id: 'avatar-6', image: avatar6, color: AVATAR_COLORS[5], letter: 'F' },
+  { id: 'avatar-7', image: avatar7, color: AVATAR_COLORS[6], letter: 'G' },
 ];
 
 const OnboardRegisterScreen = ({ navigation }) => {
@@ -52,11 +66,13 @@ const OnboardRegisterScreen = ({ navigation }) => {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   // State for selected options
   const [selectedAvatar, setSelectedAvatar] = useState('avatar-1');
   const [customAvatar, setCustomAvatar] = useState(null);
   const [selectedGender, setSelectedGender] = useState('prefer-not-to-say');
+  const [avatarRefreshKey, setAvatarRefreshKey] = useState(Date.now());
 
   // Check if we have a user on mount
   useEffect(() => {
@@ -114,6 +130,72 @@ const OnboardRegisterScreen = ({ navigation }) => {
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
+
+  // Upload custom avatar to Cloudinary (if this feature is needed)
+  const uploadCustomAvatarToCloudinary = async (imageUri) => {
+    try {
+      setUploadProgress(10);
+      
+      // Read the image file as base64
+      const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+      
+      setUploadProgress(30);
+      
+      // Get auth token (if using authentication)
+      const authToken = await AsyncStorage.getItem('authToken');
+      
+      if (!authToken) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+      
+      // Prepare data for upload
+      const uploadData = {
+        base64Image: `data:image/jpeg;base64,${base64Image}`,
+        avatarId: 'custom',
+        uniqueId: Date.now().toString()
+      };
+      
+      setUploadProgress(50);
+      
+      // Get your API URL (adjust as needed)
+      const apiUrl = "https://your-api-url.com/api"; // Replace with your actual API URL
+      const fullUrl = `${apiUrl}/upload/avatar/base64`;
+      
+      // Upload to backend
+      const response = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(uploadData)
+      });
+      
+      setUploadProgress(80);
+      
+      // Check for errors
+      if (response.status === 401) {
+        throw new Error('Authentication expired. Please log in again.');
+      }
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload avatar');
+      }
+      
+      setUploadProgress(100);
+      
+      // Return the Cloudinary URL
+      return data.avatar || data.avatarUrl;
+    } catch (error) {
+      console.error('Error uploading custom avatar:', error);
+      // For now, just return the local URI as fallback
+      return imageUri;
+    }
+  };
   
   // Standalone implementation of completeOnboarding without requiring AuthContext
   const completeOnboardingLocally = async (data) => {
@@ -129,11 +211,29 @@ const OnboardRegisterScreen = ({ navigation }) => {
         console.warn('Error getting stored user data:', storageError);
       }
       
+      // If we have a custom avatar that's a local file, we might want to upload it
+      let avatarValue = data.avatar;
+      
+      if (customAvatar && (customAvatar.startsWith('file:') || customAvatar.startsWith('content:'))) {
+        try {
+          // Upload custom avatar to Cloudinary if needed
+          // Comment this out if you're not using Cloudinary upload
+          // avatarValue = await uploadCustomAvatarToCloudinary(customAvatar);
+        } catch (uploadError) {
+          console.error('Error uploading avatar:', uploadError);
+          // Keep the local URI as fallback
+          avatarValue = customAvatar;
+        }
+      } else if (selectedAvatar && selectedAvatar.startsWith('avatar-')) {
+        // For selected default avatar, you might want to use the Cloudinary URL
+        // avatarValue = getDefaultAvatarUrl(selectedAvatar);
+      }
+      
       // Update user data with onboarding info
       const updatedUser = {
         ...userData,
         gender: data.gender,
-        avatar: data.avatar,
+        avatar: avatarValue, // This might be a Cloudinary URL or local URI
         hasCompletedOnboarding: true
       };
       
@@ -227,6 +327,7 @@ const OnboardRegisterScreen = ({ navigation }) => {
       setIsLoading(false);
     }
   };
+  
   // Navigate to next step
   const nextStep = () => {
     setCurrentStep(currentStep + 1);
@@ -237,8 +338,20 @@ const OnboardRegisterScreen = ({ navigation }) => {
     setCurrentStep(currentStep - 1);
   };
   
-  // Render avatar (letter or image)
+  // Render avatar (image or letter)
   const renderAvatar = (avatar) => {
+    // If avatar has an image, use it
+    if (avatar.image) {
+      return (
+        <Image 
+          source={avatar.image} 
+          style={styles.avatarImage}
+          resizeMode="cover"
+        />
+      );
+    }
+    
+    // Otherwise use letter avatar
     return (
       <LetterAvatar 
         letter={avatar.letter} 
@@ -280,17 +393,29 @@ const OnboardRegisterScreen = ({ navigation }) => {
                 ]}
                 onPress={pickImage}
               >
-                {customAvatar ? (
-                  <Image
-                    source={{ uri: customAvatar }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View style={styles.uploadAvatarPlaceholder}>
-                    <Ionicons name="add-circle-outline" size={24} color="#4CAF50" />
-                    <Text style={styles.uploadText}>Upload</Text>
-                  </View>
-                )}
+              {customAvatar ? (
+  isCloudinaryUrl(customAvatar) ? (
+    // Use CloudinaryImage for Cloudinary URLs
+    <CloudinaryImage
+      source={{ uri: customAvatar }}
+      style={styles.avatarImage}
+      refreshKey={Date.now()}
+      forceRefresh={true}
+      resizeMode="cover"
+    />
+  ) : (
+    // Use regular Image for local URIs
+    <Image
+      source={{ uri: customAvatar }}
+      style={styles.avatarImage}
+    />
+  )
+) : (
+  <View style={styles.uploadAvatarPlaceholder}>
+    <Ionicons name="add-circle-outline" size={24} color="#4CAF50" />
+    <Text style={styles.uploadText}>Upload</Text>
+  </View>
+)}
               </TouchableOpacity>
             </View>
             

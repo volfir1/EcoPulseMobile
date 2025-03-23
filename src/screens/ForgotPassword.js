@@ -1,268 +1,318 @@
-// screens/ForgotPassword.js
-import React, { useState } from "react";
+// src/features/auth/screens/ForgotPassword.jsx
+import React, { useRef, useEffect, useState } from 'react';
 import {
+  SafeAreaView,
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
   TextInput,
-  ActivityIndicator,
-  Alert,
+  TouchableOpacity,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard
-} from "react-native";
+  Animated,
+  ActivityIndicator
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from "../context/AuthContext";
+import { useForgotPassword } from 'hooks/forgotPassword';
+import { useAuth } from 'src/context/AuthContext';
+import styles, { greenTheme } from 'styles/forgotPasswordStyles';
 
-const ForgotPassword = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+const ForgotPassword = ({ navigation, route }) => {
+  // Get auth context
+  const authContext = useAuth();
   
-  const { forgotPassword } = useAuth();
-
-  const handleResetPassword = async () => {
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim() || !emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
+  // Use the hook with navigation and auth context
+  const {
+    email,
+    setEmail,
+    isLoading,
+    submitted,
+    showTokenInput,
+    token,
+    setToken,
+    tokenError,
+    handleResetPassword,
+    toggleTokenInput,
+    handleManualTokenFromEmailClick,
+    handleContinueWithToken,
+    handleBackToLogin
+  } = useForgotPassword(navigation, route, authContext);
+  
+  // Local state to control the tab/card display
+  const [activeTab, setActiveTab] = useState('email'); // 'email' or 'code'
+  
+  // Animation for sliding between cards
+  const slideAnimation = useRef(new Animated.Value(0)).current;
+  
+  // Update animation when active tab changes
+  useEffect(() => {
+    if (activeTab === 'code') {
+      // Slide to verification card
+      Animated.timing(slideAnimation, {
+        toValue: -1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Slide back to email card
+      Animated.timing(slideAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
-
-    setIsLoading(true);
-    try {
-      const result = await forgotPassword(email.trim());
-      
-      if (result.success) {
-        setSubmitted(true);
-      } else {
-        Alert.alert('Error', result.message || 'Failed to process your request');
-      }
-    } catch (error) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
+  }, [activeTab]);
+  
+  // Update activeTab when showTokenInput changes
+  useEffect(() => {
+    if (showTokenInput) {
+      setActiveTab('code');
     }
+  }, [showTokenInput]);
+  
+  // Calculate transform based on screen width
+  const translateX = slideAnimation.interpolate({
+    inputRange: [-1, 0],
+    outputRange: [-(styles.card.width), 0],
+  });
+  
+  // Handle "Already have a code" button
+  const handleHaveCodeAlready = () => {
+    setActiveTab('code');
+  };
+  
+  // Handle back button in code verification tab
+  const handleBackToEmail = () => {
+    setActiveTab('email');
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.card}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
+          {/* Back button */}
+          <TouchableOpacity 
+            style={styles.backNavigationButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={greenTheme.PRIMARY} />
+            <Text style={styles.backNavigationText}>Back</Text>
+          </TouchableOpacity>
+          
+          {/* Tab Selection */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'email' && styles.activeTab
+              ]}
+              onPress={() => setActiveTab('email')}
+              disabled={isLoading}
             >
-              <Ionicons name="arrow-back" size={24} color="#525F7F" />
+              <Text style={[
+                styles.tabText,
+                activeTab === 'email' && styles.activeTabText
+              ]}>
+                Request Code
+              </Text>
             </TouchableOpacity>
-            
-            <View style={styles.iconContainer}>
-              <Ionicons name="lock-open" size={70} color="#4CAF50" />
-            </View>
-            
-            {submitted ? (
-              <>
-                <Text style={styles.title}>Check Your Email</Text>
-                
-                <Text style={styles.description}>
-                  We've sent password reset instructions to:
-                </Text>
-                
-                <Text style={styles.emailDisplay}>
-                  {email}
-                </Text>
-                
-                <Text style={styles.additionalInfo}>
-                  If you don't see the email, check your spam folder or verify the email address you entered.
-                </Text>
-                
-                <TouchableOpacity 
-                  style={styles.button} 
-                  onPress={() => navigation.navigate('Login')}
-                >
-                  <LinearGradient
-                    colors={['#4CAF50', '#3E9142']}
-                    start={[0, 0]}
-                    end={[1, 0]}
-                    style={styles.buttonGradient}
-                  >
-                    <Text style={styles.buttonText}>Back to Login</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={styles.title}>Reset Password</Text>
-                
-                <Text style={styles.description}>
-                  Enter your email address and we'll send you instructions to reset your password.
-                </Text>
-                
-                <View style={styles.inputContainer}>
-                  <Ionicons name="mail" size={20} color="#525F7F" style={styles.inputIcon} />
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === 'code' && styles.activeTab
+              ]}
+              onPress={() => setActiveTab('code')}
+              disabled={isLoading}
+            >
+              <Text style={[
+                styles.tabText,
+                activeTab === 'code' && styles.activeTabText
+              ]}>
+                Enter Code
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Animated Cards Container */}
+          <Animated.View 
+            style={[
+              styles.cardsContainer,
+              { transform: [{ translateX }] }
+            ]}
+          >
+            {/* Email Input Card */}
+            <View style={[styles.card, styles.slide]}>
+              <Ionicons 
+                name="mail" 
+                size={60} 
+                color={greenTheme.PRIMARY} 
+                style={styles.emailIcon} 
+              />
+              
+              <Text style={styles.title}>Forgot Password?</Text>
+              <Text style={styles.subtitle}>
+                Enter your email address and we'll send you a verification code to reset your password.
+              </Text>
+              
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View>
                   <TextInput
                     style={styles.input}
-                    placeholder="Email Address"
+                    placeholder="Enter your email"
+                    placeholderTextColor={greenTheme.GRAY}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
                     value={email}
                     onChangeText={setEmail}
-                    placeholderTextColor="#A0A0A0"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
                     editable={!isLoading}
                   />
+                  <View style={styles.inputIconContainer}>
+                    <Ionicons name="mail-outline" size={20} color={greenTheme.GRAY} />
+                  </View>
                 </View>
-                
-                <TouchableOpacity 
-                  style={styles.button} 
-                  onPress={handleResetPassword}
-                  disabled={isLoading}
-                >
-                  <LinearGradient
-                    colors={['#4CAF50', '#3E9142']}
-                    start={[0, 0]}
-                    end={[1, 0]}
-                    style={styles.buttonGradient}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <Text style={styles.buttonText}>Send Reset Link</Text>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+              </View>
+              
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  isLoading && styles.buttonDisabled
+                ]}
+                onPress={handleResetPassword}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Send Verification Code</Text>
+                )}
+              </TouchableOpacity>
+              
+              {/* "Already have a code" option */}
+              <TouchableOpacity
+                style={styles.linkButton}
+                onPress={handleHaveCodeAlready}
+                disabled={isLoading}
+              >
+                <Text style={styles.linkText}>Already have a code?</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.linkButton, { marginTop: 8 }]}
+                onPress={handleBackToLogin}
+                disabled={isLoading}
+              >
+                <Text style={styles.linkText}>Back to Login</Text>
+              </TouchableOpacity>
+              
+              {submitted && (
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoText}>
+                    A verification code has been sent to your email. 
+                    Please check your inbox and enter the code on the next screen.
+                  </Text>
+                </View>
+              )}
+            </View>
+            
+            {/* Code Verification Card */}
+            <View style={[styles.card, styles.slide]}>
+              <Text style={styles.title}>Verify Your Email</Text>
+              <Text style={styles.subtitle}>
+                Enter the 6-character verification code sent to your email address.
+              </Text>
+              
+              {email && (
+                <View style={styles.emailDisplayContainer}>
+                  <Ionicons name="mail" size={16} color={greenTheme.PRIMARY} />
+                  <Text style={styles.emailDisplayText}>{email}</Text>
+                </View>
+              )}
+              
+              <View style={styles.codeContainer}>
+                <TextInput
+                  style={[
+                    styles.verificationInput,
+                    tokenError && styles.inputError
+                  ]}
+                  placeholder="Enter code"
+                  placeholderTextColor={greenTheme.GRAY}
+                  // Using default keyboard instead of numeric
+                  keyboardType="default"
+                  autoCapitalize="none"
+                  maxLength={10} // Allow for longer codes if needed
+                  value={token}
+                  onChangeText={setToken}
+                  editable={!isLoading}
+                />
+                {tokenError ? (
+                  <Text style={styles.errorText}>{tokenError}</Text>
+                ) : (
+                  <View style={styles.codeHelp}>
+                    <Text style={styles.codeHelpText}>Didn't receive the code?</Text>
+                    <TouchableOpacity 
+                      style={styles.resendButton}
+                      onPress={handleResetPassword}
+                      disabled={isLoading}
+                    >
+                      <Text style={styles.resendText}>Resend</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  isLoading && styles.buttonDisabled
+                ]}
+                onPress={handleContinueWithToken}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Verify & Continue</Text>
+                )}
+              </TouchableOpacity>
+              
+              <View style={styles.orContainer}>
+                <View style={styles.divider} />
+                <Text style={styles.orText}>OR</Text>
+                <View style={styles.divider} />
+              </View>
+              
+              <TouchableOpacity
+                style={styles.manualTokenButton}
+                onPress={handleManualTokenFromEmailClick}
+                disabled={isLoading}
+              >
+                <Text style={styles.manualTokenText}>
+                  Use full token from email
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Option to go back to email input */}
+              <TouchableOpacity
+                style={[styles.linkButton, { marginTop: 8 }]}
+                onPress={handleBackToEmail}
+                disabled={isLoading}
+              >
+                <Text style={styles.linkText}>Need to change email?</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 };
 
 export default ForgotPassword;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 30,
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 6,
-    position: 'relative',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    zIndex: 10,
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
-  },
-  description: {
-    fontSize: 16,
-    color: '#525F7F',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  emailDisplay: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 20,
-  },
-  additionalInfo: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 10,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: '#F8F9FB',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    marginBottom: 24,
-    height: 56,
-    borderWidth: 1,
-    borderColor: '#EAEEF2',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: '100%',
-    fontSize: 16,
-    color: '#333',
-  },
-  button: {
-    width: '100%',
-    height: 56,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginTop: 10,
-    shadowColor: "#4CAF50",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  buttonGradient: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});

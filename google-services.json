@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "34035725627",
+    "project_id": "ecopulse-ba84f",
+    "storage_bucket": "ecopulse-ba84f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:34035725627:android:a90b1ffc088a2e0bdfb31e",
+        "android_client_info": {
+          "package_name": "com.ecopulse.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "34035725627-g8vkrih40724lpjaa7qi4vofgojs5i43.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ecopulse.app",
+            "certificate_hash": "fd79849872902038e5303bef48a69023164efc7e"
+          }
+        },
+        {
+          "client_id": "34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtqQxlpzgiZS-kzu_WS7BoUdRNr5eL37M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "34035725627-e0jl08l306859kctpfm11rfqntfg0bld.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ecopulse.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -13,10 +13,36 @@
     "android": {
       "package": "com.ecopulse.app",
       "googleServicesFile": "./android/app/google-services.json",
-      "permissions": ["INTERNET"]
+      "permissions": [
+        "INTERNET"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ecopulse.app",
+              "pathPrefix": "/reset-password"
+            },
+            {
+              "scheme": "ecopulse",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "ios": {
-      "bundleIdentifier": "com.ecopulse.app"
+      "bundleIdentifier": "com.ecopulse.app",
+      "associatedDomains": [
+        "applinks:ecopulse.app"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -50,7 +76,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.34035725627-e0jl08l306859kctpfm11rfqntfg0bld"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sqlite"
     ]
   }
 }

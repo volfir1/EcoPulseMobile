@@ -6,6 +6,7 @@ import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 import { db, auth, isOnline } from '/src/context/firebase/firebase';
 import NetInfo from '@react-native-community/netinfo';
+import ResetPassword from '@screens/ResetPassword';
 
 // Determine the correct API URL based on device type and environment
 const getApiUrl = () => {
@@ -62,13 +63,18 @@ const getRefreshToken = async () => {
 
 const clearTokens = async () => {
   try {
-    await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
-    await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_DATA_KEY);
-    await AsyncStorage.removeItem(LAST_SYNC_KEY);
+    // Using Promise.all for parallel operations
+    await Promise.all([
+      AsyncStorage.removeItem(ACCESS_TOKEN_KEY),
+      AsyncStorage.removeItem(REFRESH_TOKEN_KEY),
+      AsyncStorage.removeItem(USER_DATA_KEY),
+      AsyncStorage.removeItem(LAST_SYNC_KEY)
+    ]);
+    
+    console.log('All authentication data cleared successfully');
     return true;
   } catch (error) {
-    console.error('Error clearing tokens:', error);
+    console.error('Error clearing authentication data:', error);
     return false;
   }
 };
@@ -118,11 +124,17 @@ const hasRecentSync = async () => {
 
 // Check if network is available
 const checkNetwork = async () => {
-  if (Platform.OS !== 'web') {
-    const state = await NetInfo.fetch();
-    return state.isConnected && state.isInternetReachable;
+  try {
+    if (Platform.OS !== 'web') {
+      const state = await NetInfo.fetch();
+      return state.isConnected && state.isInternetReachable;
+    }
+    return navigator.onLine;
+  } catch (error) {
+    console.error('Error checking network status:', error);
+    // Default to true if we can't check network
+    return true;
   }
-  return navigator.onLine;
 };
 
 // ----- Request Interceptors -----
@@ -527,9 +539,27 @@ const logout = async () => {
 
 // Check if user is logged in
 const isAuthenticated = async () => {
-  const token = await getAccessToken();
-  const user = await getUser();
-  return !!token && !!user;
+  try {
+    // Get both token and user in parallel for efficiency
+    const [token, user] = await Promise.all([
+      getAccessToken(),
+      getUser()
+    ]);
+    
+    // Log detailed debugging information
+    console.log('Auth check:', {
+      hasToken: !!token,
+      hasUser: !!user,
+      tokenFirstChars: token ? token.substring(0, 6) + '...' : 'none',
+      userEmail: user?.email || 'none'
+    });
+    
+    // Both must exist to be authenticated
+    return !!token && !!user;
+  } catch (error) {
+    console.error('Error checking authentication status:', error);
+    return false;
+  }
 };
 
 const resendVerificationCode = async (userId) => {
@@ -570,43 +600,33 @@ const resendVerificationCode = async (userId) => {
   }
 };
 
-const forgotPassword = async (email) => {
-  if (!email) throw new Error("Email is required");
 
+const forgotPassword = async (email, deviceType = 'unknown') => {
   try {
-    console.log('Sending password reset request:', {
+    console.log(`authService: Requesting password reset for ${email} from ${deviceType}`);
+    
+    const response = await api.post('/auth/forgot-password', { 
       email,
-      url: `${API_URL}/auth/forgot-password`
+      deviceType
     });
-
-    const response = await fetch(`${API_URL}/auth/forgot-password`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({ email }),
-      credentials: "include"
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to process password reset request");
-    }
-
-    return {
-      success: true,
-      message: data.message || "If that email address is in our database, we will send a password reset link."
-    };
+    
+    console.log('authService: forgotPassword response:', response.data);
+    
+    // IMPORTANT: Just return the response data, don't add navigation or other side effects
+    return response.data;
   } catch (error) {
-    console.error("Forgot password error:", {
-      error,
-      message: error.message
-    });
-    throw error;
+    console.error('authService: Forgot password error:', error);
+    
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    
+    const errorMessage = error.message || 'Unable to process your request. Please try again.';
+    throw new Error(errorMessage);
   }
 };
+
+
 const requestReactivation = async (email) => {
   try {
     const response = await api.post('auth/request-reactivation', { 
@@ -624,54 +644,91 @@ const requestReactivation = async (email) => {
 
 const updateUserProfile = async (userData) => {
   try {
-    // Check network connectivity
-    const isNetworkAvailable = await checkNetwork();
+    console.log('Updating user profile with data:', JSON.stringify(userData, null, 2));
     
-    if (isNetworkAvailable) {
-      // Make API call to update user profile
-      const response = await api.put('/users/profile', {
+    // Get the current user to access their ID
+    const currentUser = await getUser();
+    
+    if (!currentUser) {
+      throw new Error('User data not found');
+    }
+    
+    // Use the correct ID field - this is critical!
+    // Different auth methods might use different field names
+    const userId = currentUser.id || currentUser._id || currentUser.userId || currentUser.uid;
+    
+    if (!userId) {
+      console.error('User object:', currentUser);
+      throw new Error('User ID not found in user object');
+    }
+    
+    console.log(`Using user ID for profile update: ${userId}`);
+    
+    // Get authentication token
+    const token = await getAccessToken();
+    
+    if (!token) {
+      throw new Error('Authentication token not found');
+    }
+    
+    // Use your API base URL
+    const apiUrl = getApiUrl();
+    const fullUrl = `${apiUrl}/users/${userId}`;
+    console.log(`Making profile update request to: ${fullUrl}`);
+    
+    // Make direct fetch request
+    const response = await fetch(fullUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'x-client-type': 'mobile'
+      },
+      body: JSON.stringify({
         ...userData,
         clientType: 'mobile'
-      });
-      
-      if (response.data && response.data.success) {
-        // Update stored user data
-        const currentUser = await getUser();
-        const updatedUser = {
-          ...currentUser,
-          ...userData
-        };
-        
-        await storeUser(updatedUser);
-        
-        return {
-          success: true,
-          user: updatedUser
-        };
-      } else {
-        throw new Error(response.data?.message || 'Failed to update profile');
-      }
-    } else {
-      // Offline mode - just update local storage
-      const currentUser = await getUser();
-      if (!currentUser) {
-        throw new Error('User data not found');
-      }
-      
-      const updatedUser = {
-        ...currentUser,
-        ...userData,
-        _pendingSync: true // Mark for later sync when online
-      };
-      
-      await storeUser(updatedUser);
-      
-      return {
-        success: true,
-        user: updatedUser,
-        offlineMode: true
-      };
+      })
+    });
+    
+    // Get the response text for debugging
+    const responseText = await response.text();
+    console.log(`Profile update response (${response.status}):`, responseText);
+    
+    // Parse the response
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Error parsing response:', e);
+      throw new Error('Invalid response from server');
     }
+    
+    if (response.status === 401) {
+      throw new Error('Authentication expired. Please log in again.');
+    }
+    
+    if (!response.ok) {
+      throw new Error(data?.message || `Server error: ${response.status}`);
+    }
+    
+    if (!data.success) {
+      throw new Error(data.message || 'Update failed on server');
+    }
+    
+    // Update stored user data
+    const updatedUser = {
+      ...currentUser,
+      ...userData,
+      // If server returned user data, merge those fields as well
+      ...(data.user || {})
+    };
+    
+    await storeUser(updatedUser);
+    
+    return {
+      success: true,
+      user: updatedUser
+    };
   } catch (error) {
     console.error('Update profile error:', error);
     return {
@@ -681,9 +738,100 @@ const updateUserProfile = async (userData) => {
   }
 };
 
+// Update this method in your authService.js file
 
+const resetPassword = async (token, newPassword) => {
+  try {
+    // Ensure parameters are present
+    if (!token || !newPassword) {
+      return {
+        success: false,
+        message: "Token and new password are required."
+      };
+    }
+
+    // Log the exact token being sent for debugging
+    console.log('Sending token to server:');
+    console.log('- Length:', token.length);
+    console.log('- Full token value:', token);
+    console.log('- First 6 chars:', token.substring(0, 6));
+    console.log('- Last 6 chars:', token.substring(token.length - 6));
+    
+    // Make the API request with the exact token
+    const response = await api.post('/auth/reset-password', {
+      token,
+      newPassword
+    });
+    
+    console.log('Reset password response:', response.data);
+    
+    // If reset was successful, handle the tokens if provided
+    if (response.data.success && response.data.accessToken) {
+      await storeTokens(
+        response.data.accessToken,
+        response.data.refreshToken || null
+      );
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Reset password error:', error);
+    
+    // Enhanced error logging
+    if (error.response) {
+      console.error('Error response details:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: JSON.stringify(error.response.data),
+        headers: error.response.headers
+      });
+      
+      if (error.response.data) {
+        return error.response.data;
+      }
+    }
+    
+    // Network errors
+    if (error.request && !error.response) {
+      console.error('No response received from server');
+      return {
+        success: false,
+        message: 'No response received from server. The server might be down or unreachable.'
+      };
+    }
+    
+    return {
+      success: false,
+      message: error.message || 'Unable to reset password. Please try again.'
+    };
+  }
+};
+
+
+const verifyResetCode = async (email, shortCode) => {
+  try {
+    const response = await api.post('/auth/verify-reset-code', {
+      email,
+      shortCode
+    });
+    
+    if (response.data.success && response.data.token) {
+      // Store the full token in AsyncStorage for use in the reset process
+      await AsyncStorage.setItem('ecopulse_reset_token', response.data.token);
+      return { success: true, token: response.data.token };
+    } else {
+      throw new Error(response.data.message || 'Failed to verify code');
+    }
+  } catch (error) {
+    console.error('Error verifying reset code:', error);
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'Failed to verify code'
+    };
+  }
+};
 // ----- Export Service -----
-
+export { checkNetwork };
 const authService = {
   login,
   googleSignIn,
@@ -702,7 +850,11 @@ const authService = {
   resendVerificationCode,
   getApiUrl,
   forgotPassword,
-  updateUserProfile
+  updateUserProfile,
+ resetPassword,
+ verifyResetCode,
+ storeUser,
+ storeTokens   
 };
 
 export default authService;

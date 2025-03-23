@@ -158,7 +158,7 @@ const Home = ({ navigation }) => {
         contentContainerStyle={styles.scrollContainer}
       >
         {/* Energy Summary Section */}
-        <View style={styles.summarySection}>
+        {/* <View style={styles.summarySection}>
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>24.5</Text>
@@ -182,7 +182,7 @@ const Home = ({ navigation }) => {
               <Text style={styles.summaryLabel}>Net</Text>
             </View>
           </View>
-        </View>
+        </View> */}
 
         {/* Welcome Section */}
         <View style={styles.welcomeSection}>

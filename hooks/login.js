@@ -8,7 +8,7 @@ import { auth } from 'src/context/firebase/firebase';
 import authService from '/services/authService';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import Constants from 'expo-constants';
+// REMOVE: import Constants from 'expo-constants';
 
 // Important: Register your app for web browser redirect
 WebBrowser.maybeCompleteAuthSession();
@@ -20,25 +20,19 @@ const useLogin = (navigation) => {
   const [error, setError] = useState(null);
   const [isOffline, setIsOffline] = useState(false);
   
-  // Get the auth functions and states from context
-  const { login, networkStatus, setUser, setIsAuthenticated } = useAuth();
-  
-  // Get the configured client IDs from app.json
-  const { googleClientId } = Constants.expoConfig?.extra || {};
+  // Get the auth functions and states from context INCLUDING googleClientId
+  const { login, networkStatus, setUser, setIsAuthenticated, googleClientId } = useAuth();
   
   // Set up Expo Google Auth Session with proper configuration
-  // Important: Add scopes and proper configuration
+  // UPDATED: Use googleClientId from AuthContext instead of Constants
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: googleClientId?.android,
+    expoClientId: googleClientId?.web,
     webClientId: googleClientId?.web,
+    androidClientId: googleClientId?.android,
     iosClientId: googleClientId?.ios || googleClientId?.web,
-    expoClientId: googleClientId?.web, // Added for Expo Go
     scopes: ['profile', 'email'],
-    responseType: 'id_token',
-    usePKCE: false,
-    redirectUri: Platform.OS === 'web' 
-      ? `${window.location.origin}/`
-      : `${Constants.expoConfig?.scheme || 'ecopulse'}://`
+    // Force proxy to use auth.expo.io URI
+    proxy: true
   });
   
   // For debugging - log authentication response
@@ -216,15 +210,18 @@ const useLogin = (navigation) => {
         ios: googleClientId?.ios
       });
       
-      // Log redirect URI for debugging
-      const redirectUri = Platform.select({
-        web: `${window.location.origin}/`,
-        default: `${Constants.expoConfig?.scheme || 'ecopulse'}://`
-      });
-      console.log("Redirect URI:", redirectUri);
+      // Force proxy authentication for mobile devices
+      const authOptions = {
+        useProxy: true,
+        showInRecents: true
+      };
       
-      // Prompt user to sign in with Google
-      const result = await promptAsync();
+      // Log options
+      console.log("Auth options:", authOptions);
+      
+      // Prompt user to sign in with Google with explicit options
+      const result = await promptAsync(authOptions);
+      
       console.log("Google Auth result:", result);
       
       // Handle authentication response

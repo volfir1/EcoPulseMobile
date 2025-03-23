@@ -1,7 +1,10 @@
-// src/routes/routes.js - Modified with error handling
+// src/routes/routes.js - Modified for direct auth screen loading
 import React, { lazy, Suspense } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import ErrorBoundary from '@components/ErrorBoundary';
+import TicketsScreen from '@screens/ViewTickets';
+import TicketDetailScreen from '@screens/TicketDetail';
+import ChangePassword from '@screens/ChangePassword';
 
 // Suspense fallback component
 const LoadingComponent = () => (
@@ -56,18 +59,25 @@ const OnboardingScreen = require('../screens/Onboarding').default;
 const OnboardRegisterScreen = require('../screens/OnboardRegisterScreen').default;
 const Home = require('../screens/Home').default;
 
+// IMPORTANT: Direct imports for authentication screens to avoid lazy loading issues
+const LoginScreen = require('../screens/Login').default;
+const ForgotPasswordScreen = require('../screens/ForgotPassword').default;
+const ResetPasswordScreen = require('../screens/ResetPassword').default;
+
 // Public Routes with named components for better error tracking
 export const publicRoutes = {
   // Immediate loaded routes for critical screens
   Onboard: OnboardingScreen,
   OnboardRegister: OnboardRegisterScreen,
   
-  // Lazy loaded routes with component names for error tracking
-  Login: createLazyComponent(() => import('../screens/Login'), 'Login'),
+  // Direct loaded auth screens for reliable navigation
+  Login: LoginScreen,
+  ForgotPassword: ForgotPasswordScreen,
+  ResetPassword: ResetPasswordScreen,
+  
+  // Lazy loaded routes
   Register: createLazyComponent(() => import('../screens/Register'), 'Register'),
-  VerifyEmail: createLazyComponent(() => import('../screens/EmailVerification'), 'VerifyEmail'),
-  ForgotPassword: createLazyComponent(() => import('../screens/ForgotPassword'), 'ForgotPassword'),
-  ResetPassword: createLazyComponent(() => import('../screens/ResetPassword'), 'ResetPassword')
+  VerifyEmail: createLazyComponent(() => import('../screens/EmailVerification'), 'VerifyEmail')
 };
 
 // User routes with named components for better error tracking
@@ -77,7 +87,10 @@ export const userRoutes = {
   EnergySharing: createLazyComponent(() => import('../screens/EnergySharing/EnergySharing'), 'EnergySharing'),
   HelpSupport: createLazyComponent(() => import('../screens/SubmitTicket'), 'HelpSupport'),
   Recommendations: createLazyComponent(() => import('../screens/Recommendations/Recommendations'), 'Recommendations'),
-  UserProfile: createLazyComponent(() => import('../screens/Profile'), 'UserProfile')
+  UserProfile: createLazyComponent(() => import('../screens/Profile'), 'UserProfile'),
+  TicketsScreen: createLazyComponent(() => import('../screens/ViewTickets'), 'TicketsScreen'),
+  TicketDetailScreen: createLazyComponent(() => import('../screens/TicketDetail'), 'TicketDetailScreen'),
+  ChangePassword: createLazyComponent(() => import('../screens/ChangePassword'), 'ChangePassword')
 };
 
 // Module routes with named components for better error tracking

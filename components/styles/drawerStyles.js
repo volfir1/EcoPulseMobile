@@ -1,9 +1,9 @@
 import { StyleSheet } from "react-native";
 
-// Updated theme colors with modern approach
+// Updated theme colors with modern approach and specific green color
 export const THEME = {
   primary: {
-    main: '#22c55e',
+    main: '#37A633', // Updated to the requested green color
     light: '#4ade80',
     dark: '#16a34a',
     text: '#ffffff'
@@ -41,6 +41,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.background.paper,
+    top: 0
   },
   scrollContainer: {
     flex: 1,
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 24,
     paddingHorizontal: 20,
-    backgroundColor: THEME.primary.main,
+    backgroundColor: '#37A633', // Updated to the requested green color
     elevation: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
@@ -78,12 +79,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   
-  // Profile section styles - cleaner design
+  // Profile section styles - enhanced for proper avatar display
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
   },
   profileAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     marginRight: 15,
     borderWidth: 2,
     borderColor: "rgba(255,255,255,0.25)",
@@ -109,7 +113,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   profileEmail: {
-    fontSize: 14,
+    fontSize: 12,
     color: "rgba(255,255,255,0.9)",
   },
   
@@ -143,7 +147,7 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   activeItem: {
-    backgroundColor: THEME.primary.main,
+    backgroundColor: '#37A633', // Updated to match the header green
   },
   navItemContent: {
     flexDirection: "row",
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    backgroundColor: 'rgba(55, 166, 51, 0.08)', // Updated to match the green
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -213,6 +217,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
+  
+  // Styles for profile avatar in navigation items
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    overflow: 'hidden',
+    padding: 0
+  },
+  profileAvatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 8
+  }
 });
 
 export default styles;

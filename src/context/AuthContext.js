@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
-  signInWithCredential
+  signInWithCredential,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, isOnline } from '/src/context/firebase/firebase';
@@ -16,6 +17,8 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import authService from '/services/authService';
 import NetInfo from '@react-native-community/netinfo';
+// Add Constants import
+import Constants from 'expo-constants';
 
 // Make sure to call this at the top level of your file
 WebBrowser.maybeCompleteAuthSession();
@@ -32,12 +35,51 @@ export const AuthProvider = ({ children }) => {
   const netInfoUnsubscribe = useRef(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
-  // Configure Google Auth Request for Expo
+  // Safely get Expo Config - handles different SDK versions
+  const getExpoConfig = () => {
+    try {
+      // For Expo SDK 48+
+      if (Constants.expoConfig) {
+        return Constants.expoConfig;
+      }
+      
+      // For older Expo SDK
+      if (Constants.manifest) {
+        return Constants.manifest;
+      }
+
+      // Fallback
+      return {};
+    } catch (error) {
+      console.error('Error accessing Expo configuration:', error);
+      return {};
+    }
+  };
+
+  // Define Google Client IDs directly
+  const googleClientId = {
+    web: '34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com',
+    android: '34035725627-g8vkrih40724lpjaa7qi4vofgojs5i43.apps.googleusercontent.com',
+    ios: '34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com'
+  };
+
+  // Set the redirect URI
+  const redirectUri = Platform.OS === 'web' 
+    ? 'http://localhost:8081' 
+    : 'https://auth.expo.io/@lester20/EcoPulseMobile';
+
+  console.log("Using redirect URI:", redirectUri);
+
+  // Configure Google Auth with forced settings
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: '34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com',
-    webClientId: '34035725627-pgsqnv50ks12snc72fct3t0fr6u3v8qt.apps.googleusercontent.com',
-    androidClientId: '34035725627-g8vkrih40724lpjaa7qi4vofgojs5i43.apps.googleusercontent.com',
-    scopes: ['profile', 'email']
+    expoClientId: googleClientId.web,
+    webClientId: googleClientId.web,
+    androidClientId: googleClientId.android,
+    iosClientId: googleClientId.ios,
+    redirectUri: redirectUri,
+    scopes: ['profile', 'email'],
+    // Always use the proxy when not on web
+    proxy: Platform.OS !== 'web'
   });
 
   // Setup network monitoring
@@ -85,29 +127,92 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const restoreUser = async () => {
       try {
-        // Check for cached user data
-        const userData = await authService.getUser();
-        const isAuthValid = await authService.isAuthenticated();
+        setLoading(true);
         
-        if (userData && isAuthValid) {
-          console.log('Restored user from cache:', userData.email);
-          setUser(userData);
-          setIsAuthenticated(true);
+        // First check if we have a token - most important check
+        const accessToken = await authService.getAccessToken();
+        console.log('Token restoration check:', accessToken ? 'Token exists' : 'No token found');
+        
+        // Only proceed if we have a token
+        if (accessToken) {
+          // Get cached user data
+          const userData = await authService.getUser();
           
-          // Try to sync user data if online
-          if (networkStatus.isConnected) {
-            syncUserData(userData.id || userData.uid);
+          if (userData) {
+            console.log('Restored user from cache:', userData.email);
+            
+            // IMPORTANT: Update auth state before any network operations
+            setUser(userData);
+            setIsAuthenticated(true);
+            
+            // Then verify with server if network is available
+            if (networkStatus.isConnected) {
+              try {
+                const verifyResult = await authService.verifyAuth();
+                
+                if (verifyResult.success && verifyResult.user) {
+                  console.log('Server verification successful');
+                  
+                  // If server provides updated user data, update local state
+                  if (verifyResult.user) {
+                    setUser(prevUser => ({
+                      ...prevUser,
+                      ...verifyResult.user
+                    }));
+                    await authService.storeUser({
+                      ...userData,
+                      ...verifyResult.user,
+                      lastSynced: new Date().toISOString()
+                    });
+                  }
+                  
+                  // Update tokens if provided
+                  if (verifyResult.tokens) {
+                    await authService.storeTokens(
+                      verifyResult.tokens.accessToken,
+                      verifyResult.tokens.refreshToken || null
+                    );
+                  }
+                }
+              } catch (verifyError) {
+                console.warn('Token verification failed:', verifyError.message);
+                
+                // Only log out if the error is specifically about invalid auth
+                if (verifyError.message?.includes('auth') || 
+                    verifyError.message?.includes('token') ||
+                    verifyError.message?.includes('unauthorized')) {
+                  console.log('Invalid authentication detected, logging out');
+                  setUser(null);
+                  setIsAuthenticated(false);
+                  await authService.clearTokens();
+                } else {
+                  // For other errors (like network), keep the user logged in
+                  console.log('Non-auth error during verification, keeping user session');
+                }
+              }
+            } else {
+              console.log('Offline mode: Using cached authentication state');
+            }
+          } else {
+            console.log('Token exists but no user data found');
+            setIsAuthenticated(false);
           }
+        } else {
+          console.log('No authentication token found');
+          setIsAuthenticated(false);
+          setUser(null);
         }
       } catch (error) {
-        console.error('Error restoring user:', error);
+        console.error('Error restoring authentication state:', error);
+        setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
     
     restoreUser();
-  }, []);
+  }, [networkStatus.isConnected]);
 
   // Process Google Auth response
   useEffect(() => {
@@ -267,7 +372,11 @@ export const AuthProvider = ({ children }) => {
           throw new Error('Google authentication is not ready yet');
         }
         
-        const result = await promptAsync();
+        const result = await promptAsync({
+          useProxy: true,
+          showInRecents: true
+        });
+        
         console.log("Google auth result:", result);
         
         if (result.type === 'success') {
@@ -482,6 +591,65 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
+
+  const forgotPassword = async (email, deviceType = 'unknown') => {
+    try {
+      setLoading(true);
+      
+      // Check network connection first
+      if (!networkStatus.isConnected) {
+        return {
+          success: false,
+          message: 'Cannot reset password while offline. Please check your connection.'
+        };
+      }
+      
+      console.log(`Requesting password reset for ${email} from ${deviceType}`);
+      
+      // Call the authService forgotPassword method with device info
+      const result = await authService.forgotPassword(email, deviceType);
+      
+      // IMPORTANT: Don't add any navigation code here!
+      // Just return the result and let the component handle navigation
+      return result;
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to process password reset request'
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    try {
+      setLoading(true);
+      
+      // Check network connection first
+      if (!networkStatus?.isConnected) {
+        return {
+          success: false,
+          message: 'Cannot reset password while offline. Please check your connection.'
+        };
+      }
+      
+      // Call the authService resetPassword method
+      const result = await authService.resetPassword(token, newPassword);
+      return result;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to reset password'
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add googleClientId to the value object
   const value = {
     user,
     setUser,
@@ -493,7 +661,10 @@ export const AuthProvider = ({ children }) => {
     logout,
     networkStatus,
     syncUserData,
-    completeOnboarding
+    completeOnboarding,
+    forgotPassword,
+    resetPassword,
+    googleClientId
   };
 
   return (
@@ -511,3 +682,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

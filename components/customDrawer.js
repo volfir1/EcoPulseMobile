@@ -23,13 +23,33 @@ import {
   MaterialIcons 
 } from '@expo/vector-icons';
 import { useAuth } from "src/context/AuthContext";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import styles and theme
 import styles, { THEME } from './styles/drawerStyles';
 
-// Enhanced Icon component with appropriate icons for each section
+// Import default avatar images - USE THE SAME PATHS AS IN YOUR useProfile.js file
+import avatar1 from 'assets/avatars/png/1.png';
+import avatar2 from 'assets/avatars/png/2.png';
+import avatar3 from 'assets/avatars/png/3.png';
+import avatar4 from 'assets/avatars/4.png';
+import avatar5 from 'assets/avatars/png/5.png';
+import avatar6 from 'assets/avatars/png/6.png';
+import avatar7 from 'assets/avatars/png/7.png';
+
+// Default avatars with image sources - MUST MATCH YOUR useProfile.js
+const defaultAvatars = [
+  { id: 'avatar-1', image: avatar1, name: 'Avatar A' },
+  { id: 'avatar-2', image: avatar2, name: 'Avatar B' },
+  { id: 'avatar-3', image: avatar3, name: 'Avatar C' },
+  { id: 'avatar-4', image: avatar4, name: 'Avatar D' },
+  { id: 'avatar-5', image: avatar5, name: 'Avatar E' },
+  { id: 'avatar-6', image: avatar6, name: 'Avatar F' },
+  { id: 'avatar-7', image: avatar7, name: 'Avatar G' },
+];
+
+// Enhanced Icon component
 const DrawerIcon = ({ name, size = 22, color = THEME.text.main, active = false }) => {
-  // Map icon names to appropriate components and icon names
   switch (name) {
     case "dashboard":
       return <MaterialIcons name="dashboard" size={size} color={color} />;
@@ -66,7 +86,7 @@ const DrawerIcon = ({ name, size = 22, color = THEME.text.main, active = false }
   }
 };
 
-// Navigation Item Component with redesigned clean styling
+// Navigation Item Component
 const NavigationItem = ({ 
   title, 
   iconName, 
@@ -75,7 +95,7 @@ const NavigationItem = ({
   hasChildren = false, 
   isExpanded = false,
   isChild = false,
-  iconColor = null 
+  iconColor = null
 }) => {
   return (
     <TouchableOpacity
@@ -101,12 +121,14 @@ const NavigationItem = ({
           />
         </View>
         
-        <Text style={[
-          styles.navItemText,
-          isActive && styles.activeItemText
-        ]}>
-          {title}
-        </Text>
+        <View style={styles.titleContainer}>
+          <Text style={[
+            styles.navItemText,
+            isActive && styles.activeItemText
+          ]}>
+            {title}
+          </Text>
+        </View>
         
         {hasChildren && (
           <View style={styles.chevronContainer}>
@@ -124,23 +146,46 @@ const NavigationItem = ({
 
 // Custom Drawer Content Component
 const CustomDrawerContent = ({ navigation, state }) => {
-  // Get the logout function from AuthContext
+  // Get the useAuth hook data
   const { user, logout } = useAuth();
   
   const [expandedModules, setExpandedModules] = useState(false);
   const [profileData, setProfileData] = useState({
     name: "Alex Johnson",
     email: "alex@ecopulse.io",
-    avatarUrl: null, // Replace with actual avatar URL if available
+    avatarId: null,
+    initials: "AJ"
   });
+  
+  // Helper function to get initials from name
+  const getInitials = (user) => {
+    if (!user) return 'U';
+    
+    const firstName = user.firstName || '';
+    const lastName = user.lastName || '';
+    
+    if (firstName && lastName) {
+      return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    } else if (firstName) {
+      return firstName.charAt(0).toUpperCase();
+    } else if (lastName) {
+      return lastName.charAt(0).toUpperCase();
+    } else if (user.email) {
+      return user.email.charAt(0).toUpperCase();
+    } else {
+      return 'U';
+    }
+  };
   
   // Update profile data from user context
   useEffect(() => {
     if (user) {
+      console.log('Setting profile data from user:', user);
       setProfileData({
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User',
         email: user.email || 'user@example.com',
-        avatarUrl: user.avatar || null
+        avatarId: user.avatar || null,
+        initials: getInitials(user)
       });
     }
   }, [user]);
@@ -163,7 +208,7 @@ const CustomDrawerContent = ({ navigation, state }) => {
     outputRange: [0, 300],
   });
 
-  // Updated navigation structure based on the specified requirements
+  // Updated navigation structure
   const mainNavItems = [
     { name: "Dashboard", iconName: "dashboard" },
     {
@@ -231,7 +276,6 @@ const CustomDrawerContent = ({ navigation, state }) => {
   // Handle logout with auth context
   const handleLogout = async () => {
     try {
-      // Show confirmation dialog
       Alert.alert(
         "Logout",
         "Are you sure you want to log out?",
@@ -241,17 +285,11 @@ const CustomDrawerContent = ({ navigation, state }) => {
             text: "Logout", 
             style: "destructive",
             onPress: async () => {
-              // Show loading indicator or disable button here if needed
-              
-              // Call the logout function from AuthContext
               const result = await logout();
               
               if (result.success) {
-                // The AuthContext will handle setting isAuthenticated to false,
-                // which should trigger the navigation change in AppNavigator
                 console.log('Logged out successfully');
               } else {
-                // Show error message if logout failed
                 Alert.alert('Logout Failed', result.message || 'Something went wrong. Please try again.');
               }
             }
@@ -264,33 +302,73 @@ const CustomDrawerContent = ({ navigation, state }) => {
     }
   };
 
+  // Find default avatar image source by ID
+  const getDefaultAvatarSource = (avatarId) => {
+    if (!avatarId || typeof avatarId !== 'string') return null;
+    
+    const avatar = defaultAvatars.find(a => a.id === avatarId);
+    return avatar ? avatar.image : null;
+  };
+
+  // Render avatar based on available data
+  const renderAvatar = () => {
+    const { avatarId } = profileData;
+    console.log('Rendering avatar with ID:', avatarId);
+    
+    // If avatar ID refers to a default avatar
+    if (avatarId && avatarId.startsWith('avatar-')) {
+      const avatarSource = getDefaultAvatarSource(avatarId);
+      
+      if (avatarSource) {
+        console.log('Found default avatar image for:', avatarId);
+        return (
+          <Image
+            source={avatarSource}
+            style={styles.profileAvatar}
+            resizeMode="cover"
+          />
+        );
+      }
+    }
+    
+    // If avatar ID is a URL (not starting with avatar-)
+    if (avatarId && !avatarId.startsWith('avatar-')) {
+      console.log('Using URL for avatar:', avatarId);
+      return (
+        <Image
+          source={{ uri: avatarId }}
+          style={styles.profileAvatar}
+        />
+      );
+    }
+    
+    // Fallback to text avatar
+    console.log('Using initials fallback for avatar:', profileData.initials);
+    return (
+      <Avatar.Text 
+        size={50} 
+        label={profileData.initials || 'U'} 
+        style={styles.profileAvatar}
+        labelStyle={styles.avatarLabel}
+        color="#FFFFFF"
+        backgroundColor="rgba(255,255,255,0.25)"
+      />
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Drawer Header with Profile Info - Redesigned with clean solid color */}
-      <View style={styles.header}>
+      {/* Drawer Header with Profile Info */}
+      <View style={[styles.header, { backgroundColor: '#37A633' }]}>
         <View style={styles.logoContainer}>
           <MaterialCommunityIcons name="leaf" size={28} color="#FFFFFF" />
           <Text style={styles.logoText}>EcoPulse</Text>
         </View>
         
         <View style={styles.profileSection}>
-          {profileData.avatarUrl ? (
-            <Image
-              source={{ uri: profileData.avatarUrl }}
-              style={styles.profileAvatar}
-            />
-          ) : (
-            <Avatar.Text 
-              size={60} 
-              label={profileData.name.substr(0, 2).toUpperCase()} 
-              style={styles.profileAvatar}
-              labelStyle={styles.avatarLabel}
-              color="#FFFFFF"
-              backgroundColor="rgba(255,255,255,0.25)"
-            />
-          )}
+          {renderAvatar()}
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{profileData.name}</Text>
             <View style={styles.emailContainer}>

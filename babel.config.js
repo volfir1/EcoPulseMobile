@@ -13,11 +13,13 @@ module.exports = function(api) {
                       '@navigator': './src/navigator/',
                       '@screens': './src/screens/',
                       '@components': './components/',  // Changed from '/components/'
-                      '@utils': './utils/'            // Changed from '/utils/'
+                      '@utils': './utils/',         // Changed from '/utils/'
+                      '@services':'./services/'
                   }
               }
           ],
-          'react-native-reanimated/plugin' // ✅ Must be the LAST plugin
+          'react-native-reanimated/plugin', // ✅ Must be the LAST plugin
+          '@babel/plugin-proposal-export-namespace-from'
       ]
   };
 };

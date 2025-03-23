@@ -8,19 +8,19 @@ import { MaterialIcons, Feather, Ionicons } from '@expo/vector-icons';
 import styles, { COLORS } from './styles/headerStyles';
 
 // Button components
-const NotificationButton = ({ style, onPress, hasNotifications = true, textColor }) => (
-  <TouchableOpacity 
-    style={[styles.actionButton, style]} 
-    onPress={onPress}
-  >
-    <Ionicons
-      name="notifications-outline"
-      size={22}
-      color={textColor || COLORS.text.main}
-    />
-    {hasNotifications && <View style={styles.notificationBadge} />}
-  </TouchableOpacity>
-);
+// const NotificationButton = ({ style, onPress, hasNotifications = true, textColor }) => (
+//   <TouchableOpacity 
+//     style={[styles.actionButton, style]} 
+//     onPress={onPress}
+//   >
+//     <Ionicons
+//       name="notifications-outline"
+//       size={22}
+//       color={textColor || COLORS.text.main}
+//     />
+//     {hasNotifications && <View style={styles.notificationBadge} />}
+//   </TouchableOpacity>
+// );
 
 const MenuButton = ({ onPress, textColor }) => (
   <TouchableOpacity 
@@ -187,22 +187,22 @@ const Header = ({
     );
   };
   
-  const renderRight = () => (
-    <View style={styles.rightSection}>
-      {showNotification && (
-        <NotificationButton 
-          onPress={handleNotificationPress} 
-          textColor={textColor}
-        />
-      )}
-      {showProfile && (
-        <ProfileButton 
-          onPress={handleProfilePress} 
-          textColor={textColor}
-        />
-      )}
-    </View>
-  );
+  // const renderRight = () => (
+  //   <View style={styles.rightSection}>
+  //     {showNotification && (
+  //       <NotificationButton 
+  //         onPress={handleNotificationPress} 
+  //         textColor={textColor}
+  //       />
+  //     )}
+  //     {showProfile && (
+  //       <ProfileButton 
+  //         onPress={handleProfilePress} 
+  //         textColor={textColor}
+  //       />
+  //     )}
+  //   </View>
+  // );
   
   return (
     <Surface 
@@ -219,7 +219,7 @@ const Header = ({
       <View style={styles.navbar}>
         {renderLeft()}
         {renderCenter()}
-        {renderRight()}
+        {/* {renderRight()} For Notifications if implemented */}
       </View>
     </Surface>
   );

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+// src/features/profile/Profile.jsx
+import React from "react";
 import {
-  StyleSheet,
-  Dimensions,
   ScrollView,
   TouchableOpacity,
   View,
@@ -9,78 +8,152 @@ import {
   SafeAreaView,
   TextInput,
   ActivityIndicator,
-  Alert,
   Image
 } from "react-native";
 import Header from "@components/Header";
-import { useAuth } from "../context/AuthContext";
-// import { useProfile } from "../context/ProfileContext"; // Comment this out for now
-
-const { width, height } = Dimensions.get("screen");
-
-// Green theme colors
-const greenTheme = {
-  PRIMARY: '#2E7D32',
-  SECONDARY: '#4CAF50',
-  LIGHT: '#81C784',
-  BACKGROUND: '#E8F5E9',
-  TEXT: '#212121',
-  WHITE: '#FFFFFF',
-  GRAY: '#757575',
-  LIGHT_GRAY: '#EEEEEE',
-  ERROR: '#FF5252'
-};
+import { Ionicons } from '@expo/vector-icons';
+import { useProfile } from "hooks/useProfile";
+import styles, { greenTheme } from 'styles/ProfileStyles';
+import CloudinaryImage from 'utils/CloudinaryImage'; // Adjust the path as needed
+import { useNavigation } from '@react-navigation/native';
 
 const Profile = ({ navigation }) => {
-  // Use Auth context instead until ProfileContext is properly set up
-  const { user, logout } = useAuth();
-  
-  // Local state to manage profile data
-  const [loading, setLoading] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: ''
-  });
-  
-  // Initialize form data when user loads
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
+  // Use the custom hook to handle all the logic
+  const {
+    user,
+    loading,
+    uploadProgress,
+    isEditing,
+    showAvatarModal,
+    formData,
+    tokenStatus,
+    selectedAvatar,
+    customAvatar,
+    defaultAvatars,
+    avatarRefreshKey,
+    setIsEditing,
+    handleInputChange,
+    handleAvatarSelect,
+    pickImage,
+    toggleAvatarModal,
+    handleSubmit,
+    handlePasswordReset,
+    getAvatarInfo,
+    isCloudinaryUrl
+  } = useProfile(navigation);
 
-      });
+
+  // Render avatar based on info from the hook
+  const renderAvatar = () => {
+    const avatarInfo = getAvatarInfo();
+    
+    // For custom avatars from Cloudinary
+    if (avatarInfo.type === 'custom' && avatarInfo.isCloudinary) {
+      return (
+        <CloudinaryImage 
+          source={{ uri: avatarInfo.uri }}
+          style={styles.avatar}
+          refreshKey={avatarRefreshKey}
+          forceRefresh={true}
+          resizeMode="cover"
+        />
+      );
     }
-  }, [user]);
-
-  // Handle text input changes
-  const handleInputChange = (key, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    // For local file URIs (from image picker)
+    else if (avatarInfo.type === 'custom') {
+      return <Image source={{ uri: avatarInfo.uri }} style={styles.avatar} />;
+    }
+    // For default avatar images (from assets)
+    else if (avatarInfo.type === 'default') {
+      return <Image source={avatarInfo.image} style={styles.avatar} />;
+    }
+    // Fallback to initials
+    else {
+      return (
+        <View style={styles.avatarPlaceholder}>
+          <Text style={styles.avatarText}>{avatarInfo.initials}</Text>
+        </View>
+      );
+    }
   };
-
-  // Handle edit profile
-  const handleSubmit = async () => {
-    // For now, just show a message since the context isn't ready
-    Alert.alert('Success', 'Profile update functionality will be available soon');
-    setIsEditing(false);
-  };
-
-  // Handle password reset
-  const handlePasswordReset = () => {
-    Alert.alert('Coming Soon', 'Password reset functionality will be available soon');
-  };
-
   
-
-  // Show loading indicator if no user data
-  if (loading || !user) {
+  // Render the avatar selection modal
+  const renderAvatarModal = () => {
+    if (!isEditing || !showAvatarModal) return null;
+    
+    return (
+      <View style={styles.avatarModal}>
+        <Text style={styles.avatarModalTitle}>Choose Your Avatar</Text>
+        
+        <View style={styles.avatarGrid}>
+          {defaultAvatars.map((avatar) => (
+            <TouchableOpacity
+              key={avatar.id}
+              style={[
+                styles.avatarOption,
+                selectedAvatar === avatar.id && styles.selectedAvatarOption
+              ]}
+              onPress={() => handleAvatarSelect(avatar.id)}
+            >
+              <Image 
+                source={avatar.image} 
+                style={styles.defaultAvatarImage} 
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          ))}
+          
+          {/* Custom avatar upload option */}
+          <TouchableOpacity
+            style={[
+              styles.avatarOption,
+              customAvatar && styles.selectedAvatarOption
+            ]}
+            onPress={pickImage}
+          >
+            {customAvatar ? (
+              isCloudinaryUrl && isCloudinaryUrl(customAvatar) ? (
+                <CloudinaryImage
+                  source={{ uri: customAvatar }}
+                  style={styles.avatarImage}
+                  refreshKey={avatarRefreshKey}
+                  forceRefresh={true}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Image
+                  source={{ uri: customAvatar }}
+                  style={styles.avatarImage}
+                />
+              )
+            ) : (
+              <View style={styles.uploadAvatarPlaceholder}>
+                <Ionicons name="add-circle-outline" size={24} color={greenTheme.PRIMARY} />
+                <Text style={styles.uploadText}>Upload</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+        
+        {uploadProgress > 0 && uploadProgress < 100 && (
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
+            <Text style={styles.progressText}>{`Uploading... ${uploadProgress}%`}</Text>
+          </View>
+        )}
+        
+        <TouchableOpacity
+          style={styles.closeModalButton}
+          onPress={toggleAvatarModal}
+        >
+          <Text style={styles.closeModalText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+  
+  // Show loading indicator if loading and not editing
+  if (loading && !isEditing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -90,90 +163,138 @@ const Profile = ({ navigation }) => {
       </SafeAreaView>
     );
   }
-
+  
+  // Show login prompt if no user
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Please log in to view your profile</Text>
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 20, backgroundColor: greenTheme.PRIMARY }]}
+            onPress={() => navigation.navigate('Auth', { screen: 'Login' })}
+          >
+            <Text style={[styles.buttonText, { color: 'white' }]}>Go to Login</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  const navigateToChangePassword = () => {
+    navigation.navigate('ChangePassword');
+  };
   return (
     <SafeAreaView style={styles.container}>
-    
-    <Header title={'Manage Profile'}/>
+      <Header title={'Manage Profile'}/>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* Debug Token Info - only in development */}
+        {__DEV__ && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>Status: {tokenStatus}</Text>
+          </View>
+        )}
+      
         {/* Profile Card */}
         <View style={styles.profileCard}>
           {/* Profile Picture Section */}
           <View style={styles.avatarContainer}>
-            {user?.avatar ? (
-              <Image 
-                source={{ uri: user.avatar }} 
-                style={styles.avatar} 
-              />
+            {isEditing ? (
+              <TouchableOpacity onPress={toggleAvatarModal} style={styles.avatarEditContainer}>
+                {renderAvatar()}
+                <View style={styles.editAvatarBadge}>
+                  <Ionicons name="camera" size={18} color="white" />
+                </View>
+              </TouchableOpacity>
             ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {user?.firstName?.charAt(0) || ''}
-                  {user?.lastName?.charAt(0) || ''}
-                </Text>
-              </View>
+              renderAvatar()
             )}
           </View>
+          
+          {/* Avatar Selection Modal */}
+          {renderAvatarModal()}
 
           {/* User Info Form */}
           {isEditing ? (
-            <View style={styles.formContainer}>
-              <Text style={styles.formLabel}>First Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={formData.firstName}
-                onChangeText={(text) => handleInputChange('firstName', text)}
-                placeholder="First Name"
-              />
-              
-              <Text style={styles.formLabel}>Last Name</Text>
-              <TextInput
-                style={styles.textInput}
-                value={formData.lastName}
-                onChangeText={(text) => handleInputChange('lastName', text)}
-                placeholder="Last Name"
-              />
-              
-              <Text style={styles.formLabel}>Email</Text>
-              <TextInput
-                style={[styles.textInput, { color: greenTheme.GRAY }]}
-                value={formData.email}
-                editable={false}
-                placeholder="Email"
-              />
-              
-            
+           <View style={styles.formContainer}>
+           <Text style={styles.formLabel}>First Name</Text>
+           <TextInput
+             style={styles.textInput}
+             value={formData.firstName}
+             onChangeText={(text) => handleInputChange('firstName', text)}
+             placeholder="First Name"
+           />
+           
+           <Text style={styles.formLabel}>Last Name</Text>
+           <TextInput
+             style={styles.textInput}
+             value={formData.lastName}
+             onChangeText={(text) => handleInputChange('lastName', text)}
+             placeholder="Last Name"
+           />
+           
+           <Text style={styles.formLabel}>Gender</Text>
+           <View style={styles.genderContainer}>
+             {['male', 'female', 'prefer-not-to-say'].map((option) => (
+               <TouchableOpacity
+                 key={option}
+                 style={[
+                   styles.genderOption,
+                   formData.gender === option && styles.genderOptionSelected
+                 ]}
+                 onPress={() => handleInputChange('gender', option)}
+               >
+                 <Text 
+                   style={[
+                     styles.genderText,
+                     formData.gender === option && styles.genderTextSelected
+                   ]}
+                 >
+                   {option === 'prefer-not-to-say' ? 'Prefer not to say' : 
+                     option.charAt(0).toUpperCase() + option.slice(1)}
+                 </Text>
+               </TouchableOpacity>
+             ))}
+           </View>
+           
+           <Text style={styles.formLabel}>Email</Text>
+           <TextInput
+             style={[styles.textInput, { color: greenTheme.GRAY }]}
+             value={formData.email}
+             editable={false}
+             placeholder="Email"
+           />
+           
+           <View style={styles.buttonRow}>
+             <TouchableOpacity 
+               style={[styles.button, styles.cancelButton]} 
+               onPress={() => setIsEditing(false)}
+             >
+               <Text style={styles.buttonText}>Cancel</Text>
+             </TouchableOpacity>
              
-              
-              <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  style={[styles.button, styles.cancelButton]} 
-                  onPress={() => setIsEditing(false)}
-                >
-                  <Text style={styles.buttonText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.button, styles.saveButton]} 
-                  onPress={handleSubmit}
-                >
-                  <Text style={[styles.buttonText, { color: 'white' }]}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+             <TouchableOpacity 
+               style={[styles.button, styles.saveButton]} 
+               onPress={handleSubmit}
+               disabled={loading}
+             >
+               {loading ? (
+                 <ActivityIndicator size="small" color="white" />
+               ) : (
+                 <Text style={[styles.buttonText, { color: 'white' }]}>Save</Text>
+               )}
+             </TouchableOpacity>
+           </View>
+         </View>
           ) : (
             /* User Info Display */
             <View style={styles.userInfoSection}>
               <View style={styles.nameContainer}>
                 <Text style={styles.nameText}>{user?.firstName} {user?.lastName}</Text>
                 <Text style={styles.emailText}>{user?.email}</Text>
-                {user?.phone && (
-                  <Text style={styles.phoneText}>{user?.phone}</Text>
-                )}
               </View>
               
               <TouchableOpacity 
@@ -189,195 +310,23 @@ const Profile = ({ navigation }) => {
           
           {/* Settings Section */}
           <View style={styles.settingsSection}>
-            <TouchableOpacity 
-              style={styles.settingOption} 
-              onPress={handlePasswordReset}
-            >
-              <View style={styles.settingRow}>
-                <Text style={styles.settingText}>Reset Password</Text>
-                <Text style={styles.chevron}>›</Text>
-              </View>
-            </TouchableOpacity>
+          <TouchableOpacity 
+  style={styles.settingOption} 
+  onPress={navigateToChangePassword}
+>
+  <View style={styles.settingRow}>
+    <Ionicons name="key-outline" size={22} color="#1F2937" />
+    <Text style={styles.settingText}>Change Password</Text>
+    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+  </View>
+</TouchableOpacity>
             
             <View style={styles.divider} />
-            
-            
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: greenTheme.BACKGROUND,
-    top: 20
-  },
-  scrollView: {
-    width: width
-  },
-  scrollContent: {
-    paddingBottom: 30
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: greenTheme.PRIMARY
-  },
-  profileCard: {
-    padding: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    backgroundColor: greenTheme.WHITE,
-    shadowColor: "black",
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    shadowOpacity: 0.1,
-    elevation: 3
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: greenTheme.LIGHT_GRAY
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: greenTheme.LIGHT,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  avatarText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: greenTheme.WHITE
-  },
-  userInfoSection: {
-    alignItems: 'center',
-    marginVertical: 20
-  },
-  nameContainer: {
-    alignItems: 'center'
-  },
-  nameText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: greenTheme.TEXT,
-    marginBottom: 8,
-    textAlign: 'center'
-  },
-  emailText: {
-    fontSize: 16,
-    color: greenTheme.PRIMARY,
-    marginBottom: 8,
-    textAlign: 'center'
-  },
-  phoneText: {
-    fontSize: 14,
-    color: greenTheme.GRAY,
-    marginBottom: 8,
-    textAlign: 'center'
-  },
-  editButton: {
-    marginTop: 15,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: greenTheme.LIGHT,
-    borderRadius: 20
-  },
-  editButtonText: {
-    color: greenTheme.PRIMARY,
-    fontWeight: 'bold'
-  },
-  divider: {
-    width: "100%",
-    height: 1,
-    backgroundColor: "#E0E0E0",
-    marginVertical: 15
-  },
-  settingsSection: {
-    marginTop: 10
-  },
-  settingOption: {
-    paddingVertical: 15,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10
-  },
-  settingText: {
-    fontSize: 16,
-    color: greenTheme.TEXT
-  },
-  chevron: {
-    fontSize: 22,
-    color: greenTheme.SECONDARY
-  },
-  deleteText: {
-    fontSize: 16,
-    color: greenTheme.ERROR
-  },
-  deleteChevron: {
-    fontSize: 22,
-    color: greenTheme.ERROR
-  },
-  formContainer: {
-    marginTop: 20
-  },
-  formLabel: {
-    fontSize: 14,
-    color: greenTheme.GRAY,
-    marginBottom: 5,
-    marginLeft: 5
-  },
-  textInput: {
-    backgroundColor: greenTheme.LIGHT_GRAY,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginBottom: 15,
-    fontSize: 16
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10
-  },
-  button: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 5
-  },
-  cancelButton: {
-    backgroundColor: greenTheme.LIGHT_GRAY
-  },
-  saveButton: {
-    backgroundColor: greenTheme.PRIMARY
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: greenTheme.TEXT
-  }
-});
 
 export default Profile;

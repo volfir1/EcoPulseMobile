@@ -1,7 +1,6 @@
 // src/navigator/AppNavigator.js
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -12,6 +11,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import routes from route definitions
 import { publicRoutes, userRoutes, moduleRoutes } from '../routes/routes';
+
+// Import ticket screens
+import TicketsScreen from '../screens/ViewTickets';
+import TicketDetailScreen from '../screens/TicketDetail';
+// Note: SupportScreen is likely already part of userRoutes.HelpSupport
 
 // Import custom drawer content
 import CustomDrawerContent from '@components/customDrawer';
@@ -24,8 +28,8 @@ const Drawer = createDrawerNavigator();
 // Custom header for all screens
 const getScreenOptions = ({ route, navigation }) => {
   // Define which screens should have gradient headers
-  const gradientScreens = ['Dashboard', 'Main',, 'Solar Energy'];
-  const hideHeaderScreens = ['Login', 'Register', 'ForgotPassword', 'Onboard', 'OnboardRegister', 'Home']; 
+  const gradientScreens = ['Dashboard', 'Main', 'Solar Energy'];
+  const hideHeaderScreens = ['Login', 'Register', 'ForgotPassword', 'Onboard', 'OnboardRegister', 'Home','ProfileScreen','ChangePassword','Support', 'Tickets']; ; 
   
   // Check if current screen should hide header
   if (hideHeaderScreens.includes(route.name)) {
@@ -51,7 +55,24 @@ const getScreenOptions = ({ route, navigation }) => {
   };
 };
 
-// Main app tab navigator
+// Profile Stack Navigator - for profile and related screens
+const ProfileStack = () => (
+  <Stack.Navigator screenOptions={({ route, navigation }) => getScreenOptions({ route, navigation })}>
+    <Stack.Screen name="ProfileScreen" component={userRoutes.UserProfile} />
+    <Stack.Screen name="ChangePassword" component={userRoutes.ChangePassword} />
+  </Stack.Navigator>
+);
+
+// Support Stack Navigator (for tickets and support)
+const SupportStack = () => (
+  <Stack.Navigator screenOptions={({ route, navigation }) => getScreenOptions({ route, navigation })}>
+    <Stack.Screen name="Support" component={userRoutes.HelpSupport} />
+    <Stack.Screen name="Tickets" component={TicketsScreen} />
+    <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
+  </Stack.Navigator>
+);
+
+// Main app tab navigator - updated to use ProfileStack
 const AppTabs = () => (
   <Tab.Navigator
     screenOptions={({ route }) => ({
@@ -74,9 +95,10 @@ const AppTabs = () => (
     })}
   >
     <Tab.Screen name="Dashboard" component={userRoutes.Dashboard} />
-    <Tab.Screen name="Profile" component={userRoutes.UserProfile} />
+    <Tab.Screen name="Profile" component={ProfileStack} />
   </Tab.Navigator>
 );
+
 // Drawer Navigator that wraps the Tab Navigator
 const AppDrawer = () => (
   <Drawer.Navigator
@@ -93,10 +115,11 @@ const AppDrawer = () => (
     
     {/* User routes */}
     <Drawer.Screen name="Dashboard" component={userRoutes.Dashboard} />
-    <Drawer.Screen name="Profile" component={userRoutes.UserProfile} />
+    <Drawer.Screen name="Profile" component={ProfileStack} />
     <Drawer.Screen name="Energy Sharing" component={userRoutes.EnergySharing} />
     <Drawer.Screen name="Recommendations" component={userRoutes.Recommendations} />
-    <Drawer.Screen name="Help & Support" component={userRoutes.HelpSupport} />
+    <Drawer.Screen name="Help & Support" component={SupportStack} />
+    <Drawer.Screen name="My Tickets" component={TicketsScreen} />
     
     {/* Energy module routes */}
     <Drawer.Screen name="Solar Energy" component={moduleRoutes.Solar} />
@@ -105,6 +128,23 @@ const AppDrawer = () => (
     <Drawer.Screen name="Hydropower" component={moduleRoutes.Hydro} />
     <Drawer.Screen name="Biomass" component={moduleRoutes.Bio} />
   </Drawer.Navigator>
+);
+
+// Main App Stack that includes the ticket detail screen
+const AppStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Home" component={AppDrawer} />
+    <Stack.Screen 
+      name="TicketDetail" 
+      component={TicketDetailScreen}
+      options={{ headerShown: true }} 
+    />
+    <Stack.Screen 
+      name="ChangePassword" 
+      component={userRoutes.ChangePassword}
+      options={{ headerShown: true }} 
+    />
+  </Stack.Navigator>
 );
 
 // Auth navigator with login/register flows
@@ -127,7 +167,7 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
-// Main AppNavigator
+// Main AppNavigator - no longer wrapped in NavigationContainer
 const AppNavigator = () => {
   // Get auth context
   const { isAuthenticated, loading, user } = useAuth();
@@ -185,15 +225,6 @@ const AppNavigator = () => {
       // Check if email is verified separately
       const emailVerified = await AsyncStorage.getItem('ecopulse_email_verified');
       
-      // Log detailed state for debugging
-      console.log('App navigation state detection:', {
-        userOnboardingComplete,
-        onboardingComplete,
-        hasVerifiedEmail,
-        emailVerified,
-        isAuthenticated
-      });
-
       // IMPORTANT: Prioritize the explicit onboarding flag
       // This ensures that if hasCompletedOnboarding is false, we show the onboarding
       // regardless of other factors
@@ -278,26 +309,24 @@ const AppNavigator = () => {
   });
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Decide which flow to show based on app state */}
-        {showOnboarding && (
-          <Stack.Screen name="Onboard" component={publicRoutes.Onboard} />
-        )}
-        
-        {showOnboardingRegister && (
-          <Stack.Screen name="OnboardRegister" component={publicRoutes.OnboardRegister} />
-        )}
-        
-        {showAuthStack && (
-          <Stack.Screen name="Auth" component={AuthStack} />
-        )}
-        
-        {showMainApp && (
-          <Stack.Screen name="Home" component={AppDrawer} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {/* Decide which flow to show based on app state */}
+      {showOnboarding && (
+        <Stack.Screen name="Onboard" component={publicRoutes.Onboard} />
+      )}
+      
+      {showOnboardingRegister && (
+        <Stack.Screen name="OnboardRegister" component={publicRoutes.OnboardRegister} />
+      )}
+      
+      {showAuthStack && (
+        <Stack.Screen name="Auth" component={AuthStack} />
+      )}
+      
+      {showMainApp && (
+        <Stack.Screen name="AppMain" component={AppStack} />
+      )}
+    </Stack.Navigator>
   );
 };
 
