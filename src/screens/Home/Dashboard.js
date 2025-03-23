@@ -11,8 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEnergyData } from '../hooks/useEnergyData';
-import { dashboardStyles, colors } from '../styles/globalStyles';
+import { useEnergyData } from 'utils/homeScreenData';
+import { dashboardStyles, colors } from 'styles/homeScreenStyles';
 
 const { width } = Dimensions.get('window');
 

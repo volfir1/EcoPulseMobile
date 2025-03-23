@@ -14,7 +14,8 @@ module.exports = function(api) {
                       '@screens': './src/screens/',
                       '@components': './components/',  // Changed from '/components/'
                       '@utils': './utils/',         // Changed from '/utils/'
-                      '@services':'./services/'
+                      '@services':'./services/',
+                      '@assets':'./assets/'
                   }
               }
           ],

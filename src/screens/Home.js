@@ -1,30 +1,32 @@
 import React from "react";
 import {
-  StyleSheet,
-  Dimensions,
-  ScrollView,
   View,
   Text,
   TouchableOpacity,
   Image,
   StatusBar,
-  FlatList
+  FlatList,
+  ScrollView,
+  RefreshControl
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { homeStyles, colors } from "styles/homeScreenStyles";
+import RenewableNewsCard from "./Home/renewableNewsCard";
+import EnergySummary from "./Home/EnergySummary";
+import { useEnergyData } from "utils/homeScreenData";
 
-const { width, height } = Dimensions.get("screen");
-
+// Energy modules data
 const energyModules = [
   {
     id: "solar",
     title: "Solar Energy",
     icon: "sunny",
-    color: "#FF9800",
-    gradientColors: ["#FF9800", "#FB8C00"],
-    route: "Solar Energy",
-    image: require("../../assets/imgs/solar-panel.png"),
+    color: colors.energy.solar,
+    gradientColors: [colors.energy.solar, "#FB8C00"],
+    route: "SolarEnergy",
+    image: require("../../assets/energy/solar.jpg"),
     description: "Monitor your solar panel performance",
     stats: "24.5 kWh"
   },
@@ -32,10 +34,10 @@ const energyModules = [
     id: "wind",
     title: "Wind Energy",
     icon: "thunderstorm",
-    color: "#03A9F4",
-    gradientColors: ["#03A9F4", "#0288D1"],
-    route: "Wind Energy",
-    image: require("../../assets/imgs/wind-turbine.png"),
+    color: colors.energy.wind,
+    gradientColors: [colors.energy.wind, "#0288D1"],
+    route: "WindEnergy",
+    image: require("../../assets/energy/turbine.png"),
     description: "Track wind turbine efficiency",
     stats: "8.2 kWh"
   },
@@ -43,10 +45,10 @@ const energyModules = [
     id: "geo",
     title: "Geothermal",
     icon: "flame",
-    color: "#F44336",
-    gradientColors: ["#F44336", "#D32F2F"],
+    color: colors.energy.geo,
+    gradientColors: [colors.energy.geo, "#D32F2F"],
     route: "Geothermal",
-    image: require("../../assets/imgs/geothermal-plant.png"),
+    image: require("../../assets/energy/geothermal.jpg"),
     description: "Analyze geothermal system metrics",
     stats: "5.8 kWh"
   },
@@ -54,63 +56,73 @@ const energyModules = [
     id: "hydro",
     title: "Hydropower",
     icon: "water",
-    color: "#2196F3",
-    gradientColors: ["#2196F3", "#1976D2"],
+    color: colors.energy.hydro,
+    gradientColors: [colors.energy.hydro, "#1976D2"],
     route: "Hydropower",
-    image: require("../../assets/imgs/hydropower-dam.png"),
+    image: require("../../assets/energy/hydropower.jpg"),
     description: "View hydroelectric generation data",
     stats: "12.3 kWh"
   }
 ];
 
+// Quick action buttons
 const quickActions = [
   {
     id: "sharing",
     title: "Sharing",
     icon: "share-social",
-    color: "#4CAF50",
-    route: "Energy Sharing"
+    color: colors.status.success,
+    route: "EnergySharing"
   },
   {
     id: "recommendations",
     title: "Tips",
     icon: "bulb",
-    color: "#FF9800",
+    color: colors.energy.solar,
     route: "Recommendations"
   },
   {
     id: "help",
     title: "Help",
     icon: "help-circle",
-    color: "#03A9F4",
-    route: "Help & Support"
-  },
- 
+    color: colors.accent,
+    route: "HelpSupport"
+  }
 ];
 
 const Home = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { loading, refreshData } = useEnergyData();
   
-  // Custom header component
-  const CustomHeader = () => (
+  // Header component with improved design
+  const renderHeader = () => (
     <LinearGradient
-      colors={['#4CAF50', '#388E3C']}
+      colors={[colors.primary, colors.primaryDark]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
-      style={[styles.headerContainer, { paddingTop: insets.top }]}
+      style={[homeStyles.headerContainer, { paddingTop: insets.top }]}
     >
-      <View style={styles.headerContent}>
+      <View style={homeStyles.headerContent}>
         <TouchableOpacity 
-          style={styles.menuButton}
+          style={homeStyles.menuButton}
           onPress={() => navigation.openDrawer()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="menu" size={26} color="#FFF" />
         </TouchableOpacity>
         
-        <View style={styles.headerTitleContainer}>
-          <Text  right={15} style={styles.headerTitle}>EcoPulse</Text>
+        <View style={homeStyles.headerTitleContainer}>
+          <Text style={homeStyles.headerTitle}>EcoPulse</Text>
         </View>
-      
+        
+        {/* <TouchableOpacity 
+          style={homeStyles.notificationButton}
+          onPress={() => navigation.navigate('Notifications')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="notifications" size={22} color="#FFF" />
+          <View style={homeStyles.notificationBadge} />
+        </TouchableOpacity> */}
       </View>
     </LinearGradient>
   );
@@ -118,86 +130,66 @@ const Home = ({ navigation }) => {
   // Render energy module item
   const renderEnergyModule = ({ item }) => (
     <TouchableOpacity
-      style={styles.moduleCard}
+      style={homeStyles.moduleCard}
       onPress={() => navigation.navigate(item.route)}
+      activeOpacity={0.8}
     >
-      <Image source={item.image} style={styles.moduleImage} />
+      <Image source={item.image} style={homeStyles.moduleImage} />
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.85)']}
-        style={styles.moduleOverlay}
+        style={homeStyles.moduleOverlay}
       >
         <View 
           style={[
-            styles.moduleIconContainer, 
+            homeStyles.moduleIconContainer, 
             { backgroundColor: item.color }
           ]}
         >
           <Ionicons name={item.icon} size={20} color="#FFF" />
         </View>
-        <View style={styles.moduleContent}>
-          <Text style={styles.moduleTitle}>{item.title}</Text>
-          <Text style={styles.moduleDescription}>{item.description}</Text>
+        <View style={homeStyles.moduleContent}>
+          <Text style={homeStyles.moduleTitle}>{item.title}</Text>
+          <Text style={homeStyles.moduleDescription}>{item.description}</Text>
         </View>
-        <View style={styles.moduleStats}>
-          <Text style={styles.moduleStatsValue}>{item.stats}</Text>
-          <Text style={styles.moduleStatsLabel}>Today</Text>
+        <View style={homeStyles.moduleStats}>
+          <Text style={homeStyles.moduleStatsValue}>{item.stats}</Text>
+          <Text style={homeStyles.moduleStatsLabel}>Today</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <View style={homeStyles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primaryDark} />
       
       {/* Custom Header */}
-      <CustomHeader />
+      {renderHeader()}
       
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContainer}
+        contentContainerStyle={homeStyles.scrollContainer}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refreshData} colors={[colors.primary]} />
+        }
       >
-        {/* Energy Summary Section */}
-        {/* <View style={styles.summarySection}>
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>24.5</Text>
-              <Text style={styles.summaryUnit}>kWh</Text>
-              <Text style={styles.summaryLabel}>Production</Text>
-            </View>
-            
-            <View style={styles.summaryDivider} />
-            
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>18.3</Text>
-              <Text style={styles.summaryUnit}>kWh</Text>
-              <Text style={styles.summaryLabel}>Consumption</Text>
-            </View>
-            
-            <View style={styles.summaryDivider} />
-            
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>6.2</Text>
-              <Text style={styles.summaryUnit}>kWh</Text>
-              <Text style={styles.summaryLabel}>Net</Text>
-            </View>
-          </View>
-        </View> */}
-
-        {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome Back, Alex</Text>
-          <Text style={styles.welcomeText}>
+        {/* Welcome Section with personalized greeting */}
+        <View style={homeStyles.welcomeSection}>
+          <Text style={homeStyles.welcomeTitle}>Welcome Back!</Text>
+          <Text style={homeStyles.welcomeText}>
             Your renewable energy systems are performing well today
           </Text>
         </View>
         
+        {/* Energy Summary Section */}
+        <EnergySummary />
+        
         {/* Energy Modules Section */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Energy Systems</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
+        <View style={homeStyles.sectionContainer}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={homeStyles.sectionTitle}>Energy Systems</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('EnergySystems')}>
+              <Text style={homeStyles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
           
@@ -207,252 +199,38 @@ const Home = ({ navigation }) => {
             keyExtractor={item => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.modulesListContainer}
+            contentContainerStyle={homeStyles.modulesListContainer}
           />
         </View>
         
         {/* Quick Actions */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Access</Text>
+        <View style={homeStyles.sectionContainer}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={homeStyles.sectionTitle}>Quick Access</Text>
           </View>
           
-          <View style={styles.quickAccessGrid}>
+          <View style={homeStyles.quickAccessGrid}>
             {quickActions.map((action) => (
               <TouchableOpacity 
                 key={action.id}
-                style={styles.quickAccessItem}
+                style={homeStyles.quickAccessItem}
                 onPress={() => navigation.navigate(action.route)}
+                activeOpacity={0.7}
               >
-                <View style={[styles.quickAccessIcon, { backgroundColor: action.color }]}>
+                <View style={[homeStyles.quickAccessIcon, { backgroundColor: action.color }]}>
                   <Ionicons name={action.icon} size={22} color="#FFF" />
                 </View>
-                <Text style={styles.quickAccessText}>{action.title}</Text>
+                <Text style={homeStyles.quickAccessText}>{action.title}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
+        
+        {/* News Section */}
+        <RenewableNewsCard navigation={navigation} />
       </ScrollView>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
-  headerContainer: {
-    width: '100%',
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    zIndex: 10,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 56,
-    paddingHorizontal: 16,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFF',
-  },
-  menuButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFC107',
-  },
-  scrollContainer: {
-    paddingBottom: 30,
-  },
-  summarySection: {
-    backgroundColor: '#FFF',
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  summaryContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F8F9FB",
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: "#E0E0E0",
-    marginVertical: 5,
-  },
-  summaryValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1E293B",
-  },
-  summaryUnit: {
-    fontSize: 12,
-    color: "#64748B",
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
-  },
-  welcomeSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  welcomeTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1E293B",
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 4,
-  },
-  sectionContainer: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#1E293B",
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: "#4CAF50",
-    fontWeight: "600",
-  },
-  modulesListContainer: {
-    paddingLeft: 16,
-    paddingRight: 8,
-  },
-  moduleCard: {
-    width: width * 0.8,
-    height: 160,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginRight: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  moduleImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  moduleOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    paddingTop: 30,
-    height: "60%",
-  },
-  moduleIconContainer: {
-    position: "absolute",
-    top: -15,
-    left: 12,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  moduleContent: {
-    flex: 1,
-  },
-  moduleTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginBottom: 2,
-  },
-  moduleDescription: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.85)",
-    marginBottom: 4,
-  },
-  moduleStats: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  moduleStatsValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginRight: 5,
-  },
-  moduleStatsLabel: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.85)",
-  },
-  quickAccessGrid: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 16,
-    marginTop: 8,
-  },
-  quickAccessItem: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickAccessIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  quickAccessText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#1E293B",
-    textAlign: "center",
-  }
-});
 
 export default Home;

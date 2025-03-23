@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { homeStyles } from '../styles/globalStyles';
+import { homeStyles } from 'styles/homeScreenStyles';
 
 /**
  * Energy Summary Component

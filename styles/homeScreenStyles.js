@@ -893,7 +893,7 @@ export const newsStyles = StyleSheet.create({
     ...shadowStyles.small,
   },
   loadMoreText: {
-    fontSize: 14,
+    fontSize: 14,   
     color: colors.text.primary,
     marginRight: spacing.xs,
   },

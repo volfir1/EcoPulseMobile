@@ -11,8 +11,8 @@ import {
   Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { newsStyles, colors } from '../styles/globalStyles';
-import { useRenewableNews } from '../hooks/useEnergyData';
+import { newsStyles, colors } from 'styles/homeScreenStyles';
+import { useRenewableNews } from 'utils/homeScreenData';
 
 const RenewableNewsCard = ({ navigation }) => {
   const {
@@ -83,7 +83,7 @@ const RenewableNewsCard = ({ navigation }) => {
           <Image
             source={{ uri: item.urlToImage }}
             style={newsStyles.articleImage}
-            defaultSource={require('../assets/imgs/placeholder.png')}
+            defaultSource={require('../../../assets/energy/news_placeholder.png')}
             onError={() => handleImageError(item)}
           />
         ) : (
@@ -192,7 +192,7 @@ const RenewableNewsCard = ({ navigation }) => {
                 <Image 
                   source={{ uri: selectedArticle.urlToImage }} 
                   style={newsStyles.modalImage}
-                  defaultSource={require('../assets/imgs/placeholder.png')}
+                  defaultSource={require('../../../assets/energy/news_placeholder.png')}
                   onError={() => handleImageError(selectedArticle)}
                 />
               )}
@@ -260,7 +260,7 @@ const RenewableNewsCard = ({ navigation }) => {
             </Text>
             <TouchableOpacity 
               style={newsStyles.refreshButton} 
-              onPress={refreshNews}
+              onPress={() => !loading && refreshNews()}
               disabled={loading}
             >
               <Ionicons 
